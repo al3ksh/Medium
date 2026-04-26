@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, Paperclip } from 'lucide-react'
+import { Menu, X, Paperclip, Reply } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import MessageInput from './MessageInput'
 
-export default function Chat({ channel, onUserClick, onUserContextMenu }) {
+export default function Chat({ channel, users, nickname, onUserClick, onUserContextMenu }) {
   const socket = useSocket()
   const getColor = useUserColor()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [imageViewer, setImageViewer] = useState(null)
+  const [replyTo, setReplyTo] = useState(null)
   const bottomRef = useRef(null)
   const token = localStorage.getItem('token')
 
@@ -57,11 +58,30 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
       attachment: attachmentData?.url || null,
       attachmentName: attachmentData?.originalName || null,
       attachmentType: attachmentData?.mimetype || null,
+      replyTo: replyTo?.id || null,
     })
+    setReplyTo(null)
   }
 
   function handleDeleteMessage(id) {
     socket.emit('message:delete', id)
+  }
+
+  function renderContent(text) {
+    const parts = text.split(/(@\w[\w\s]*?)(?=\s|$|[^\w])/g)
+    return parts.map((part, i) => {
+      if (part.startsWith('@')) {
+        const name = part.slice(1).trim()
+        if (name === 'everyone' || name === 'here') {
+          return <span key={i} className="mention mention-everyone">{part}</span>
+        }
+        const isReal = users.some(u => u === name)
+        if (isReal) {
+          return <span key={i} className="mention" style={{ color: getColor(name) }} onClick={(e) => { e.stopPropagation(); onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 }) }}>{part}</span>
+        }
+      }
+      return part
+    })
   }
 
   function formatTime(ts) {
@@ -92,12 +112,12 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
           <div className="chat-empty">No messages yet. Say something!</div>
         ) : (
           messages.map((msg) => (
-            <div key={msg.id} className="message">
+            <div key={msg.id} id={`msg-${msg.id}`} className="message" onContextMenu={(e) => { e.preventDefault(); setReplyTo(msg) }}>
               <div
                 className="message-avatar clickable"
                 style={{ background: getColor(msg.nickname) }}
                 onClick={(e) => onUserClick?.({ user: msg.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
-                    onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, msg.nickname) }}
+                     onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, msg.nickname) }}
               >
                 {msg.nickname[0]?.toUpperCase()}
               </div>
@@ -112,11 +132,32 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
                     {msg.nickname}
                   </span>
                   <span className="message-time">{formatTime(msg.created_at)}</span>
-                  <button className="message-delete" onClick={() => handleDeleteMessage(msg.id)} title="Delete">
-                    <X size={14} />
-                  </button>
+                  <div className="message-actions">
+                    <button className="message-action" onClick={() => setReplyTo(msg)} title="Reply">
+                      <Reply size={14} />
+                    </button>
+                    <button className="message-action" onClick={() => handleDeleteMessage(msg.id)} title="Delete">
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
-                {msg.content && <p className="message-text">{msg.content}</p>}
+                {msg.reply_to && (
+                  <div className="message-reply-ref" onClick={() => {
+                    const el = document.getElementById(`msg-${msg.reply_to.id}`)
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    el?.classList.add('message-highlight')
+                    setTimeout(() => el?.classList.remove('message-highlight'), 1500)
+                  }}>
+                    <div className="reply-ref-line" />
+                    <span className="reply-ref-nick" style={{ color: getColor(msg.reply_to.nickname) }}>
+                      {msg.reply_to.nickname}
+                    </span>
+                    <span className="reply-ref-content">
+                      {msg.reply_to.content ? (msg.reply_to.content.length > 80 ? msg.reply_to.content.slice(0, 80) + '...' : msg.reply_to.content) : 'Click to see attachment'}
+                    </span>
+                  </div>
+                )}
+                {msg.content && <p className="message-text">{renderContent(msg.content)}</p>}
                 {msg.attachment && isImage(msg.attachment_type) && (
                   <div className="message-image-container" onClick={() => setImageViewer(msg.attachment)}>
                     <img src={msg.attachment} alt="" className="message-image" loading="lazy" />
@@ -134,7 +175,7 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
         <div ref={bottomRef} />
       </div>
 
-      <MessageInput onSend={handleSend} />
+      <MessageInput onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} users={users} nickname={nickname} />
 
       {imageViewer && (
         <div className="image-viewer-overlay" onClick={() => setImageViewer(null)}>

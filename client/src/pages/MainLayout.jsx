@@ -157,7 +157,7 @@ export default function MainLayout() {
             <p>Pick a channel to start talking</p>
           </div>
         ) : activeChannel.type === 'text' ? (
-          <Chat key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} />
+          <Chat key={activeChannel.id} channel={activeChannel} users={users} nickname={nickname} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} />
         ) : (
           <VoiceChannel key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} />
         )}

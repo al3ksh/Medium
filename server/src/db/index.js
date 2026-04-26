@@ -25,6 +25,7 @@ function migrate() {
       attachment TEXT,
       attachment_name TEXT,
       attachment_type TEXT,
+      reply_to TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
     );
@@ -39,6 +40,11 @@ function migrate() {
 
     INSERT OR IGNORE INTO channels (id, name, type) VALUES ('general', 'general', 'text');
   `)
+
+  const cols = db.prepare("PRAGMA table_info(messages)").all().map(c => c.name)
+  if (!cols.includes('reply_to')) {
+    db.exec('ALTER TABLE messages ADD COLUMN reply_to TEXT')
+  }
 }
 
 module.exports = { db, migrate }

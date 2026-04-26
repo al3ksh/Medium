@@ -15,7 +15,7 @@ function registerChatHandlers(io, socket) {
   })
 
   socket.on('message:send', (data) => {
-    const { channelId, content, attachment, attachmentName, attachmentType } = data
+    const { channelId, content, attachment, attachmentName, attachmentType, replyTo } = data
 
     if (!channelId || (!content && !attachment)) return
     if (content && content.length > 2000) return
@@ -27,9 +27,17 @@ function registerChatHandlers(io, socket) {
     const id = uuidv4()
     const now = Math.floor(Date.now() / 1000)
 
+    let replyData = null
+    if (replyTo) {
+      const original = db.prepare('SELECT id, nickname, content FROM messages WHERE id = ?').get(replyTo)
+      if (original) {
+        replyData = { id: original.id, nickname: original.nickname, content: original.content }
+      }
+    }
+
     db.prepare(
-      'INSERT INTO messages (id, channel_id, nickname, content, attachment, attachment_name, attachment_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(id, channelId, socket.user.nickname, content || null, attachment || null, attachmentName || null, attachmentType || null, now)
+      'INSERT INTO messages (id, channel_id, nickname, content, attachment, attachment_name, attachment_type, reply_to, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, channelId, socket.user.nickname, content || null, attachment || null, attachmentName || null, attachmentType || null, replyTo || null, now)
 
     const message = {
       id,
@@ -39,6 +47,7 @@ function registerChatHandlers(io, socket) {
       attachment: attachment || null,
       attachment_name: attachmentName || null,
       attachment_type: attachmentType || null,
+      reply_to: replyData,
       created_at: now,
     }
 
