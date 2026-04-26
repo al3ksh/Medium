@@ -1,12 +1,16 @@
 import { useEffect, useRef } from 'react'
-import { useUserColor, useUserBio } from '../contexts/AuthContext'
+import { useUserColor, useUserBio, useUserAvatar, useUserBanner } from '../contexts/AuthContext'
 
 export default function UserProfilePopup({ user, x, y, onClose }) {
   const popupRef = useRef(null)
   const getColor = useUserColor()
   const getBio = useUserBio()
+  const getAvatar = useUserAvatar()
+  const getBanner = useUserBanner()
   const color = getColor(user)
   const bio = getBio(user)
+  const avatarUrl = getAvatar(user)
+  const bannerUrl = getBanner(user)
 
   useEffect(() => {
     function handleClick(e) {
@@ -43,9 +47,11 @@ export default function UserProfilePopup({ user, x, y, onClose }) {
           top: Math.max(16, Math.min(y, window.innerHeight - 400)),
         }}
       >
-        <div className="user-popup-banner" style={{ background: color }} />
-        <div className="user-popup-avatar" style={{ background: color }}>
-          {user[0]?.toUpperCase()}
+        <div className="user-popup-banner" style={{ background: color }}>
+          {bannerUrl && <img src={bannerUrl} alt="" className="user-popup-banner-img" />}
+        </div>
+        <div className="user-popup-avatar" style={avatarUrl ? {} : { background: color }}>
+          {avatarUrl ? <img src={avatarUrl} alt="" /> : user[0]?.toUpperCase()}
         </div>
         <div className="user-popup-body">
           <h4 className="user-popup-name">{user}</h4>

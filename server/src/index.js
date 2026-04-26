@@ -30,6 +30,40 @@ app.use('/api/channels', channelRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/upload', uploadRoutes)
 
+const GIPHY_KEY = process.env.GIPHY_API_KEY || '0UTRb7tkDoVsdm/ksdcxf6yo'
+
+app.get('/api/gif/search', async (req, res) => {
+  const q = req.query.q || ''
+  if (!q) return res.json([])
+  try {
+    const r = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(q)}&limit=20&rating=pg`)
+    const data = await r.json()
+    res.json((data.data || []).map(g => ({
+      id: g.id,
+      url: g.images?.original?.url,
+      preview: g.images?.fixed_width_small?.url || g.images?.preview_gif?.url,
+      title: g.title || '',
+    })))
+  } catch {
+    res.json([])
+  }
+})
+
+app.get('/api/gif/trending', async (req, res) => {
+  try {
+    const r = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=20&rating=pg`)
+    const data = await r.json()
+    res.json((data.data || []).map(g => ({
+      id: g.id,
+      url: g.images?.original?.url,
+      preview: g.images?.fixed_width_small?.url || g.images?.preview_gif?.url,
+      title: g.title || '',
+    })))
+  } catch {
+    res.json([])
+  }
+})
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() })
 })
@@ -37,17 +71,21 @@ app.get('/api/health', (req, res) => {
 migrate()
 startPurgeInterval()
 
-const biosRows = db.prepare('SELECT nickname, bio FROM user_bios').all()
-for (const row of biosRows) {
-  if (row.bio) userBios.set(row.nickname, row.bio)
-}
-
 const onlineUsers = new Map()
 const userColors = new Map()
-const userBios = new Map()
+const userProfiles = new Map()
 
-function broadcastBios() {
-  io.emit('user:bios', Object.fromEntries(userBios))
+const biosRows = db.prepare('SELECT nickname, bio, avatar_url, banner_url FROM user_bios').all()
+for (const row of biosRows) {
+  const profile = {}
+  if (row.bio) profile.bio = row.bio
+  if (row.avatar_url) profile.avatar = row.avatar_url
+  if (row.banner_url) profile.banner = row.banner_url
+  if (Object.keys(profile).length > 0) userProfiles.set(row.nickname, profile)
+}
+
+function broadcastProfiles() {
+  io.emit('user:profiles', Object.fromEntries(userProfiles))
 }
 
 function broadcastColors() {
@@ -64,7 +102,7 @@ io.on('connection', (socket) => {
   io.emit('users:update', Array.from(onlineUsers.values()))
 
   socket.emit('user:colors', Object.fromEntries(userColors))
-  socket.emit('user:bios', Object.fromEntries(userBios))
+  socket.emit('user:profiles', Object.fromEntries(userProfiles))
 
   registerChatHandlers(io, socket)
   registerVoiceHandlers(io, socket)
@@ -76,9 +114,33 @@ io.on('connection', (socket) => {
 
   socket.on('user:bio', (bio) => {
     const trimmed = (bio || '').slice(0, 190)
-    userBios.set(nickname, trimmed)
-    db.prepare('INSERT OR REPLACE INTO user_bios (nickname, bio) VALUES (?, ?)').run(nickname, trimmed)
-    broadcastBios()
+    const profile = userProfiles.get(nickname) || {}
+    profile.bio = trimmed
+    userProfiles.set(nickname, profile)
+    db.prepare('INSERT OR REPLACE INTO user_bios (nickname, bio, avatar_url, banner_url) VALUES (?, ?, ?, ?)').run(
+      nickname, trimmed, profile.avatar || null, profile.banner || null
+    )
+    broadcastProfiles()
+  })
+
+  socket.on('user:avatar', (url) => {
+    const profile = userProfiles.get(nickname) || {}
+    profile.avatar = url || null
+    userProfiles.set(nickname, profile)
+    db.prepare('INSERT OR REPLACE INTO user_bios (nickname, bio, avatar_url, banner_url) VALUES (?, ?, ?, ?)').run(
+      nickname, profile.bio || '', url || null, profile.banner || null
+    )
+    broadcastProfiles()
+  })
+
+  socket.on('user:banner', (url) => {
+    const profile = userProfiles.get(nickname) || {}
+    profile.banner = url || null
+    userProfiles.set(nickname, profile)
+    db.prepare('INSERT OR REPLACE INTO user_bios (nickname, bio, avatar_url, banner_url) VALUES (?, ?, ?, ?)').run(
+      nickname, profile.bio || '', profile.avatar || null, url || null
+    )
+    broadcastProfiles()
   })
 
   socket.on('channel:created', (channel) => {
@@ -107,7 +169,7 @@ io.on('connection', (socket) => {
 
     io.emit('users:update', Array.from(onlineUsers.values()))
     broadcastColors()
-    broadcastBios()
+    broadcastProfiles()
   })
 })
 

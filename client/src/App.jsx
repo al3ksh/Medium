@@ -12,7 +12,7 @@ export default function App() {
     const token = localStorage.getItem('token')
     const nickname = localStorage.getItem('nickname')
     const avatarColor = loadSettings().avatarColor || nicknameToColor(nickname || '')
-    return token ? { token, nickname, ready: false, avatarColor, userColors: {}, userBios: {} } : null
+    return token ? { token, nickname, ready: false, avatarColor, userColors: {}, userProfiles: {} } : null
   })
   const [socket, setSocket] = useState(null)
 
@@ -34,8 +34,8 @@ export default function App() {
             setAuth((a) => a ? { ...a, userColors: colors } : a)
           })
 
-          s.on('user:bios', (bios) => {
-            setAuth((a) => a ? { ...a, userBios: bios } : a)
+          s.on('user:profiles', (profiles) => {
+            setAuth((a) => a ? { ...a, userProfiles: profiles } : a)
           })
 
           setSocket(s)
@@ -61,7 +61,7 @@ export default function App() {
     const avatarColor = loadSettings().avatarColor || nicknameToColor(nickname)
     localStorage.setItem('token', token)
     localStorage.setItem('nickname', nickname)
-    setAuth({ token, nickname, ready: false, avatarColor, userColors: {}, userBios: {} })
+    setAuth({ token, nickname, ready: false, avatarColor, userColors: {}, userProfiles: {} })
   }
 
   function handleLogout() {

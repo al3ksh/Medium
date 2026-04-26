@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth, useUserBio, useUserAvatar, useUserBanner } from '../contexts/AuthContext'
 import { useVoice } from '../contexts/VoiceContext'
 import { useSocket } from '../contexts/SocketContext'
 import { nicknameToColor, loadSettings, saveSettings, THEMES, THEME_VARS, applyTheme } from '../utils'
-import { X, LogOut, Check, Palette } from 'lucide-react'
+import { X, LogOut, Check, Palette, Camera, Trash2 } from 'lucide-react'
+import CropModal from './CropModal'
+
+const MAX_BIO = 190
 
 // Custom tooltip slider mimicking Discord
 function TooltipSlider({ value, min, max, onChange, suffix = '%', disabled = false, trackStyle = {} }) {
@@ -177,42 +180,114 @@ export default function SettingsModal({ onClose }) {
 }
 
 function AccountTab({ settings, onUpdate }) {
-  const { nickname, avatarColor, updateAvatarColor, userBios } = useAuth()
+  const { nickname, avatarColor, updateAvatarColor, userProfiles } = useAuth()
   const socket = useSocket()
+  const getBio = useUserBio()
+  const getAvatar = useUserAvatar()
+  const getBanner = useUserBanner()
   const color = avatarColor || nicknameToColor(nickname)
-  const currentBio = userBios?.[nickname] || ''
+  const currentBio = getBio(nickname)
+  const avatarUrl = getAvatar(nickname)
+  const bannerUrl = getBanner(nickname)
+  const [bioText, setBioText] = useState(currentBio)
+  const [cropModal, setCropModal] = useState(null)
+  const [cropError, setCropError] = useState('')
+  const avatarInputRef = useRef(null)
+  const bannerInputRef = useRef(null)
+
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  const MAX_SIZE = 5 * 1024 * 1024
+
+  function validateAndOpen(e, type) {
+    setCropError('')
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!ALLOWED.includes(file.type)) {
+      setCropError('Only JPG, PNG, GIF, WebP allowed')
+      e.target.value = ''
+      return
+    }
+    if (file.size > MAX_SIZE) {
+      setCropError('Max file size is 5MB')
+      e.target.value = ''
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setCropModal({ src: reader.result, type })
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  async function handleCrop(blob, type) {
+    const formData = new FormData()
+    formData.append('file', blob, `${type}_${Date.now()}.jpg`)
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: formData,
+    })
+    if (res.ok) {
+      const data = await res.json()
+      socket.emit(`user:${type}`, data.url)
+    }
+    setCropModal(null)
+  }
 
   function handleBioChange(e) {
-    const bio = e.target.value.slice(0, 190)
-    socket.emit('user:bio', bio)
+    const val = e.target.value.slice(0, 190)
+    setBioText(val)
+  }
+
+  function handleBioBlur() {
+    socket.emit('user:bio', bioText)
   }
 
   return (
     <div className="settings-section">
       <h3>My Account</h3>
       <div className="account-card">
-        <div className="account-banner" style={{ background: color }} />
+        <div className="account-banner" style={{ background: color }}>
+          {bannerUrl && <img src={bannerUrl} alt="" className="account-banner-img" />}
+          <div className="banner-edit-btns">
+            <button onClick={() => bannerInputRef.current?.click()}><Camera size={16} /></button>
+            {bannerUrl && <button onClick={() => socket.emit('user:banner', null)}><Trash2 size={16} /></button>}
+          </div>
+          <input ref={bannerInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp" hidden onChange={(e) => validateAndOpen(e, 'banner')} />
+        </div>
         <div className="account-info">
-          <div className="account-avatar" style={{ background: color }}>
-            {nickname[0]?.toUpperCase()}
+          <div className="account-avatar-wrap">
+            <div className="account-avatar" style={avatarUrl ? {} : { background: color }}>
+              {avatarUrl ? <img src={avatarUrl} alt="" /> : nickname[0]?.toUpperCase()}
+            </div>
+            <div className="avatar-edit-btns">
+              <button onClick={() => avatarInputRef.current?.click()}><Camera size={14} /></button>
+              {avatarUrl && <button onClick={() => socket.emit('user:avatar', null)}><Trash2 size={14} /></button>}
+            </div>
+            <input ref={avatarInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp" hidden onChange={(e) => validateAndOpen(e, 'avatar')} />
           </div>
           <div className="account-details">
             <span className="account-name">{nickname}</span>
             <span className="account-tag">@{nickname.toLowerCase().replace(/\s/g, '-')}</span>
+          </div>
+        </div>
       </div>
+
+      {cropError && <div className="crop-error">{cropError}</div>}
 
       <div className="settings-group">
         <label>About Me</label>
-        <textarea
-          className="bio-input"
-          rows={3}
-          maxLength={190}
-          placeholder="Tell others something about yourself..."
-          defaultValue={currentBio}
-          onBlur={handleBioChange}
-        />
-      </div>
-    </div>
+        <div className="bio-wrapper">
+          <textarea
+            className="bio-input"
+            rows={3}
+            maxLength={190}
+            placeholder="Tell others something about yourself..."
+            value={bioText}
+            onChange={handleBioChange}
+            onBlur={handleBioBlur}
+          />
+          <span className="bio-counter">{MAX_BIO - bioText.length}</span>
+        </div>
       </div>
 
       <div className="settings-group">
@@ -233,6 +308,17 @@ function AccountTab({ settings, onUpdate }) {
           ))}
         </div>
       </div>
+
+      {cropModal && (
+        <CropModal
+          imageSrc={cropModal.src}
+          aspect={cropModal.type === 'avatar' ? 1 : 4.5}
+          outputWidth={cropModal.type === 'avatar' ? 256 : 600}
+          outputHeight={cropModal.type === 'avatar' ? 256 : 133}
+          onCrop={(blob) => handleCrop(blob, cropModal.type)}
+          onCancel={() => setCropModal(null)}
+        />
+      )}
     </div>
   )
 }

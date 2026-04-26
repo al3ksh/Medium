@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Hash, Volume2, Plus, X, MicOff, Headphones } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
-import { useUserColor } from '../contexts/AuthContext'
+import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 
 export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onUserClick, onUserContextMenu }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened } = useVoice()
   const getColor = useUserColor()
+  const getAvatar = useUserAvatar()
   const token = localStorage.getItem('token')
 
   async function handleCreate(e) {
@@ -106,7 +107,9 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                     onClick={(e) => onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 })}
                     onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, name) }}
                   >
-                    <div className="voice-user-avatar" style={{ background: getColor(name) }}>{name[0]?.toUpperCase()}</div>
+                    <div className="voice-user-avatar" style={getAvatar(name) ? {} : { background: getColor(name) }}>
+                      {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
+                    </div>
                     <span className="voice-user-name">{name}{name === nickname ? ' (you)' : ''}</span>
                     <div className="voice-user-status-icons">
                       {name === nickname && isMuted && !isDeafened && <MicOff size={14} className="voice-user-status muted" />}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones } from 'lucide-react'
-import { useAuth, useAvatarColor } from '../contexts/AuthContext'
+import { useAuth, useAvatarColor, useUserAvatar } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
 import { nicknameToColor } from '../utils'
@@ -17,6 +17,7 @@ export default function MainLayout() {
   const socket = useSocket()
   const { joined, voiceChannel, leaveVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
   const avatarColor = useAvatarColor()
+  const getAvatar = useUserAvatar()
   const [channels, setChannels] = useState([])
   const [activeChannel, setActiveChannel] = useState(null)
   const [users, setUsers] = useState([])
@@ -116,7 +117,9 @@ export default function MainLayout() {
 
         <div className="sidebar-footer">
           <div className="user-info" onClick={(e) => setUserPopup({ user: nickname, x: e.clientX + 10, y: e.clientY - 200 })}>
-            <div className="user-avatar" style={{ background: avatarColor }}>{nickname[0]?.toUpperCase()}</div>
+            <div className="user-avatar" style={getAvatar(nickname) ? {} : { background: avatarColor }}>
+              {getAvatar(nickname) ? <img src={getAvatar(nickname)} alt="" /> : nickname[0]?.toUpperCase()}
+            </div>
             <span className="user-name">{nickname}</span>
           </div>
           <div className="footer-actions">

@@ -45,6 +45,14 @@ function migrate() {
   if (!cols.includes('reply_to')) {
     db.exec('ALTER TABLE messages ADD COLUMN reply_to TEXT')
   }
+
+  const profileCols = db.prepare("PRAGMA table_info(user_bios)").all().map(c => c.name)
+  if (!profileCols.includes('avatar_url')) {
+    db.exec('ALTER TABLE user_bios ADD COLUMN avatar_url TEXT DEFAULT NULL')
+  }
+  if (!profileCols.includes('banner_url')) {
+    db.exec('ALTER TABLE user_bios ADD COLUMN banner_url TEXT DEFAULT NULL')
+  }
 }
 
 module.exports = { db, migrate }

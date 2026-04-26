@@ -1,5 +1,5 @@
 import { useVoice } from '../contexts/VoiceContext'
-import { useAvatarColor, useUserColor } from '../contexts/AuthContext'
+import { useAvatarColor, useUserColor, useUserAvatar } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
 import { Volume2, Mic, MicOff, Headphones, PhoneOff } from 'lucide-react'
 
@@ -17,6 +17,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
   const { joined, voiceChannel, peers, speaking, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
   const selfColor = useAvatarColor()
   const getColor = useUserColor()
+  const getAvatar = useUserAvatar()
   const isActive = joined && voiceChannel?.id === channel.id
 
   return (
@@ -32,8 +33,8 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
             className="voice-peer clickable"
             onClick={(e) => onUserClick?.({ user: nickname, x: e.clientX + 10, y: e.clientY - 100 })}
           >
-            <div className={`voice-avatar speaking-${speaking[socketId] ? 'active' : 'idle'}`} style={{ background: selfColor }}>
-              {nickname[0]?.toUpperCase()}
+            <div className={`voice-avatar speaking-${speaking[socketId] ? 'active' : 'idle'}`} style={getAvatar(nickname) ? {} : { background: selfColor }}>
+              {getAvatar(nickname) ? <img src={getAvatar(nickname)} alt="" /> : nickname[0]?.toUpperCase()}
               {isMuted && !isDeafened && <MicOff size={20} className="voice-status-icon" />}
               {isDeafened && <Headphones size={20} className="voice-status-icon deafened" />}
             </div>
@@ -48,8 +49,8 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
             onClick={(e) => onUserClick?.({ user: p.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
             onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, p.nickname) }}
           >
-            <div className={`voice-avatar speaking-${speaking[p.socketId] ? 'active' : 'idle'}`} style={{ background: getColor(p.nickname) }}>
-              {p.nickname[0]?.toUpperCase()}
+            <div className={`voice-avatar speaking-${speaking[p.socketId] ? 'active' : 'idle'}`} style={getAvatar(p.nickname) ? {} : { background: getColor(p.nickname) }}>
+              {getAvatar(p.nickname) ? <img src={getAvatar(p.nickname)} alt="" /> : p.nickname[0]?.toUpperCase()}
             </div>
             <span>{p.nickname}</span>
           </div>

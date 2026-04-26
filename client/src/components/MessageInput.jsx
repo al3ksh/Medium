@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Paperclip, SendHorizonal, X, Reply } from 'lucide-react'
+import { Paperclip, SendHorizonal, X, Reply, Smile } from 'lucide-react'
+import EmojiPicker from './EmojiPicker'
+import GifPicker from './GifPicker'
 
 export default function MessageInput({ onSend, replyTo, onCancelReply, users, nickname }) {
   const [text, setText] = useState('')
@@ -7,8 +9,10 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   const [uploading, setUploading] = useState(false)
   const [mentionQuery, setMentionQuery] = useState(null)
   const [mentionIndex, setMentionIndex] = useState(0)
+  const [activePicker, setActivePicker] = useState(null)
   const inputRef = useRef(null)
   const fileInputRef = useRef(null)
+  const pickerRef = useRef(null)
 
   const mentionUsers = mentionQuery !== null
     ? (() => {
@@ -115,6 +119,32 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     if (f) setFile(f)
   }
 
+  useEffect(() => {
+    if (!activePicker) return
+    function handleClick(e) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setActivePicker(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [activePicker])
+
+  function handleEmojiSelect(emoji) {
+    const pos = inputRef.current?.selectionStart ?? text.length
+    const newText = text.slice(0, pos) + emoji + text.slice(pos)
+    setText(newText)
+    setTimeout(() => {
+      inputRef.current?.focus()
+      const newPos = pos + emoji.length
+      inputRef.current?.setSelectionRange(newPos, newPos)
+    }, 0)
+  }
+
+  function handleGifSelect(url) {
+    onSend(url, null)
+  }
+
   return (
     <form className="message-input-form" onSubmit={handleSubmit}>
       {replyTo && (
@@ -151,9 +181,27 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
           disabled={uploading}
           autoFocus
         />
-        <button type="submit" className="send-btn" disabled={uploading || (!text.trim() && !file)}>
-          <SendHorizonal size={16} />
-        </button>
+        <div className="input-actions-right">
+          <button
+            type="button"
+            className={`picker-btn gif-text-btn ${activePicker === 'gif' ? 'active' : ''}`}
+            onClick={() => setActivePicker(p => p === 'gif' ? null : 'gif')}
+            title="GIF"
+          >
+            GIF
+          </button>
+          <button
+            type="button"
+            className={`picker-btn ${activePicker === 'emoji' ? 'active' : ''}`}
+            onClick={() => setActivePicker(p => p === 'emoji' ? null : 'emoji')}
+            title="Emoji"
+          >
+            <Smile size={20} />
+          </button>
+          <button type="submit" className="send-btn" disabled={uploading || (!text.trim() && !file)}>
+            <SendHorizonal size={16} />
+          </button>
+        </div>
         {mentionUsers.length > 0 && (
           <div className="mention-dropdown">
             {mentionUsers.slice(0, 8).map((u, i) => (
@@ -166,6 +214,16 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
                 <span className="mention-item-name">{u}</span>
               </div>
             ))}
+          </div>
+        )}
+        {activePicker && (
+          <div ref={pickerRef} className="picker-container">
+            {activePicker === 'emoji' && (
+              <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setActivePicker(null)} />
+            )}
+            {activePicker === 'gif' && (
+              <GifPicker onSelect={handleGifSelect} onClose={() => setActivePicker(null)} />
+            )}
           </div>
         )}
       </div>

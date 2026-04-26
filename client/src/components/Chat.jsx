@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X, Paperclip, Reply } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
-import { useUserColor } from '../contexts/AuthContext'
+import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import MessageInput from './MessageInput'
 
 export default function Chat({ channel, users, nickname, onUserClick, onUserContextMenu }) {
   const socket = useSocket()
   const getColor = useUserColor()
+  const getAvatar = useUserAvatar()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [imageViewer, setImageViewer] = useState(null)
@@ -96,6 +97,14 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
     return mimetype && mimetype.startsWith('image/')
   }
 
+  function isGifUrl(text) {
+    if (!text) return false
+    const trimmed = text.trim()
+    return /^https?:\/\/media\d*\.giphy\.com\/media\/.+/i.test(trimmed) ||
+      /^https?:\/\/.+\.giphy\.com\/.+/i.test(trimmed) ||
+      (/^https?:\/\/.+/i.test(trimmed) && trimmed.endsWith('.gif') && !trimmed.includes(' '))
+  }
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -115,11 +124,11 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
             <div key={msg.id} id={`msg-${msg.id}`} className="message" onContextMenu={(e) => { e.preventDefault(); setReplyTo(msg) }}>
               <div
                 className="message-avatar clickable"
-                style={{ background: getColor(msg.nickname) }}
+                style={getAvatar(msg.nickname) ? {} : { background: getColor(msg.nickname) }}
                 onClick={(e) => onUserClick?.({ user: msg.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
                      onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, msg.nickname) }}
               >
-                {msg.nickname[0]?.toUpperCase()}
+                {getAvatar(msg.nickname) ? <img src={getAvatar(msg.nickname)} alt="" /> : msg.nickname[0]?.toUpperCase()}
               </div>
               <div className="message-body">
                 <div className="message-header">
@@ -157,7 +166,12 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                     </span>
                   </div>
                 )}
-                {msg.content && <p className="message-text">{renderContent(msg.content)}</p>}
+                {msg.content && !isGifUrl(msg.content) && <p className="message-text">{renderContent(msg.content)}</p>}
+                {msg.content && isGifUrl(msg.content) && (
+                  <div className="message-gif-container">
+                    <img src={msg.content.trim()} alt="GIF" className="message-gif" loading="lazy" onClick={() => setImageViewer(msg.content.trim())} />
+                  </div>
+                )}
                 {msg.attachment && isImage(msg.attachment_type) && (
                   <div className="message-image-container" onClick={() => setImageViewer(msg.attachment)}>
                     <img src={msg.attachment} alt="" className="message-image" loading="lazy" />

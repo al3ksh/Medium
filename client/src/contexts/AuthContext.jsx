@@ -23,5 +23,15 @@ export function useUserColor() {
 
 export function useUserBio() {
   const auth = useContext(AuthContext)
-  return (name) => auth?.userBios?.[name] || ''
+  return (name) => auth?.userProfiles?.[name]?.bio || ''
+}
+
+export function useUserAvatar() {
+  const auth = useContext(AuthContext)
+  return (name) => auth?.userProfiles?.[name]?.avatar || null
+}
+
+export function useUserBanner() {
+  const auth = useContext(AuthContext)
+  return (name) => auth?.userProfiles?.[name]?.banner || null
 }
