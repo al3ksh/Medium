@@ -1,0 +1,25 @@
+services:
+  server:
+    build: ./server
+    container_name: medium-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./server/.env
+    volumes:
+      - medium-db:/app/medium.db
+      - medium-uploads:/app/uploads
+
+  client:
+    build: ./client
+    container_name: medium-client
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - server
+
+volumes:
+  medium-db:
+  medium-uploads:
