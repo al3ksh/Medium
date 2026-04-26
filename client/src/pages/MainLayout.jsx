@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { PhoneOff, Settings, Menu } from 'lucide-react'
 import { useAuth, useAvatarColor } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
@@ -121,11 +122,11 @@ export default function MainLayout() {
           <div className="footer-actions">
             {joined && (
               <button className="footer-btn disconnect" onClick={leaveVoice} title="Disconnect Voice">
-                📞
+                <PhoneOff size={16} />
               </button>
             )}
             <button className="footer-btn" onClick={() => setShowSettings(true)} title="User Settings">
-              ⚙
+              <Settings size={16} />
             </button>
           </div>
         </div>
@@ -135,7 +136,7 @@ export default function MainLayout() {
         {!activeChannel ? (
           <div className="welcome">
             <div className="mobile-toggle" onClick={() => setShowMobileSidebar(!showMobileSidebar)}>
-              &#9776;
+              <Menu size={20} />
             </div>
             <h2>Welcome to Medium</h2>
             <p>Pick a channel to start talking</p>

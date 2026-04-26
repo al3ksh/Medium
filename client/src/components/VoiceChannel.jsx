@@ -1,6 +1,7 @@
 import { useVoice } from '../contexts/VoiceContext'
 import { useAvatarColor, useUserColor } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
+import { Volume2 } from 'lucide-react'
 
 export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }) {
   const { joined, voiceChannel, peers, speaking, joinVoice, leaveVoice, nickname, socketId } = useVoice()
@@ -11,7 +12,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
   return (
     <div className="voice-container">
       <div className="voice-header">
-        <span>🔊 {channel.name}</span>
+        <span><Volume2 size={16} /> {channel.name}</span>
       </div>
 
       <div className="voice-body">

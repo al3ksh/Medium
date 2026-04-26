@@ -368,7 +368,6 @@ body {
 .mobile-toggle {
   display: none;
   cursor: pointer;
-  font-size: 1.2rem;
   padding: 0.25rem;
 }
 
@@ -459,7 +458,6 @@ body {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 1rem;
   margin-left: auto;
   padding: 0 4px;
 }
@@ -524,7 +522,9 @@ body {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .message-input-row {
@@ -544,9 +544,11 @@ body {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 1.2rem;
   padding: 0.4rem 0.6rem;
   border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .attach-btn:hover {
@@ -572,11 +574,12 @@ body {
   background: var(--accent);
   border: none;
   color: white;
-  padding: 0.4rem 1rem;
+  padding: 0.4rem 0.75rem;
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .send-btn:hover:not(:disabled) {
@@ -597,6 +600,9 @@ body {
 }
 
 .voice-header {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   font-weight: 600;
@@ -849,9 +855,11 @@ body {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 1.2rem;
   cursor: pointer;
   padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .settings-close:hover {
@@ -1140,9 +1148,11 @@ body {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 1rem;
   padding: 4px 6px;
   border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .footer-btn:hover {
@@ -1178,7 +1188,9 @@ body {
 }
 
 .context-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   width: 100%;
   padding: 6px 8px;
   border: none;

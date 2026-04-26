@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useVoice } from '../contexts/VoiceContext'
 import { nicknameToColor, loadSettings, saveSettings } from '../utils'
+import { X } from 'lucide-react'
 
 const TABS = [
   { id: 'account', label: 'My Account' },
@@ -41,7 +42,7 @@ export default function SettingsModal({ onClose }) {
         </div>
 
         <div className="settings-content">
-          <button className="settings-close" onClick={onClose}>✕</button>
+          <button className="settings-close" onClick={onClose}><X size={20} /></button>
 
           {tab === 'account' && <AccountTab settings={settings} onUpdate={update} />}
           {tab === 'voice' && <VoiceTab settings={settings} onUpdate={update} voice={voice} />}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Hash, Volume2, Plus, X } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useUserColor } from '../contexts/AuthContext'
 
@@ -47,14 +48,14 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
     }
   }
 
-  const icon = type === 'text' ? '#' : '🔊'
+  const ChannelIcon = type === 'text' ? Hash : Volume2
 
   return (
     <div className="channel-section">
       <div className="channel-section-header">
         <span>{label}</span>
         <button className="channel-add-btn" onClick={() => setCreating(!creating)} title="Add channel">
-          +
+          <Plus size={16} />
         </button>
       </div>
 
@@ -81,7 +82,7 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
               className={`channel-item ${activeId === ch.id ? 'active' : ''}`}
               onClick={() => onSelect(ch)}
             >
-              <span className="channel-icon">{icon}</span>
+              <span className="channel-icon"><ChannelIcon size={16} /></span>
               <span className="channel-name">{ch.name}</span>
               {type === 'voice' && isJoinedVoice && (
                 <button
@@ -89,11 +90,11 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                   onClick={(e) => { e.stopPropagation(); leaveVoice() }}
                   title="Disconnect"
                 >
-                  ✕
+                  <X size={12} />
                 </button>
               )}
               <button className="channel-delete-btn" onClick={(e) => handleDelete(ch.id, e)} title="Delete">
-                ×
+                <X size={14} />
               </button>
             </div>
             {allUsers.length > 0 && (

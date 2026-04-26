@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { User, Volume2, VolumeX } from 'lucide-react'
 
 export default function UserContextMenu({ user, x, y, onProfile, onMuteToggle, onVolumeChange, isMuted, volume, onClose }) {
   const menuRef = useRef(null)
@@ -25,7 +26,7 @@ export default function UserContextMenu({ user, x, y, onProfile, onMuteToggle, o
     <div className="context-menu-overlay" onClick={onClose}>
       <div className="context-menu" ref={menuRef} style={{ left: menuX, top: menuY }}>
         <button className="context-item" onClick={() => { onProfile(user); onClose() }}>
-          Profile
+            <User size={14} /> Profile
         </button>
         <div className="context-sep" />
         <div className="context-item-static">
@@ -42,7 +43,7 @@ export default function UserContextMenu({ user, x, y, onProfile, onMuteToggle, o
         </div>
         <div className="context-sep" />
         <button className={`context-item ${isMuted ? 'danger' : ''}`} onClick={() => { onMuteToggle(user); onClose() }}>
-          {isMuted ? 'Unmute User' : 'Mute User'}
+            {isMuted ? <><Volume2 size={14} /> Unmute User</> : <><VolumeX size={14} /> Mute User</>}
         </button>
       </div>
     </div>

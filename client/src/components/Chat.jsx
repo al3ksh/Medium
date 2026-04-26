@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Menu, X, Paperclip } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
@@ -78,7 +79,7 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
     <div className="chat-container">
       <div className="chat-header">
         <div className="mobile-toggle" onClick={() => window.dispatchEvent(new Event('toggle-sidebar'))}>
-          &#9776;
+          <Menu size={20} />
         </div>
         <span className="chat-channel-name"># {channel.name}</span>
       </div>
@@ -111,7 +112,7 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
                   </span>
                   <span className="message-time">{formatTime(msg.created_at)}</span>
                   <button className="message-delete" onClick={() => handleDeleteMessage(msg.id)} title="Delete">
-                    ×
+                    <X size={14} />
                   </button>
                 </div>
                 {msg.content && <p className="message-text">{msg.content}</p>}
@@ -122,7 +123,7 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
                 )}
                 {msg.attachment && !isImage(msg.attachment_type) && (
                   <a href={msg.attachment} target="_blank" rel="noreferrer" className="message-file">
-                    📎 {msg.attachment_name || 'File'}
+                    <Paperclip size={14} /> {msg.attachment_name || 'File'}
                   </a>
                 )}
               </div>
