@@ -1,8 +1,12 @@
 import { useState } from 'react'
+import { useVoice } from '../contexts/VoiceContext'
+import { useUserColor } from '../contexts/AuthContext'
 
 export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
+  const { occupancy, joined, voiceChannel, leaveVoice, nickname } = useVoice()
+  const getColor = useUserColor()
   const token = localStorage.getItem('token')
 
   async function handleCreate(e) {
@@ -66,19 +70,45 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
         </form>
       )}
 
-      {channels.map((ch) => (
-        <div
-          key={ch.id}
-          className={`channel-item ${activeId === ch.id ? 'active' : ''}`}
-          onClick={() => onSelect(ch)}
-        >
-          <span className="channel-icon">{icon}</span>
-          <span className="channel-name">{ch.name}</span>
-          <button className="channel-delete-btn" onClick={(e) => handleDelete(ch.id, e)} title="Delete">
-            ×
-          </button>
-        </div>
-      ))}
+      {channels.map((ch) => {
+        const users = occupancy[ch.id] || []
+        const isJoinedVoice = joined && voiceChannel?.id === ch.id
+        const allUsers = isJoinedVoice ? [...users.filter(u => u !== nickname), nickname] : users
+
+        return (
+          <div key={ch.id}>
+            <div
+              className={`channel-item ${activeId === ch.id ? 'active' : ''}`}
+              onClick={() => onSelect(ch)}
+            >
+              <span className="channel-icon">{icon}</span>
+              <span className="channel-name">{ch.name}</span>
+              {type === 'voice' && isJoinedVoice && (
+                <button
+                  className="voice-disconnect-inline"
+                  onClick={(e) => { e.stopPropagation(); leaveVoice() }}
+                  title="Disconnect"
+                >
+                  ✕
+                </button>
+              )}
+              <button className="channel-delete-btn" onClick={(e) => handleDelete(ch.id, e)} title="Delete">
+                ×
+              </button>
+            </div>
+            {allUsers.length > 0 && (
+              <div className="voice-users-list">
+                {allUsers.map((name, i) => (
+                  <div key={`${name}-${i}`} className="voice-user-item">
+                    <div className="voice-user-avatar" style={{ background: getColor(name) }}>{name[0]?.toUpperCase()}</div>
+                    <span>{name}{name === nickname ? ' (you)' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

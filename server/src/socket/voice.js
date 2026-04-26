@@ -1,3 +1,14 @@
+function buildOccupancy(io) {
+  const occupancy = {}
+  for (const [, s] of io.sockets.sockets) {
+    if (s.voiceChannel) {
+      if (!occupancy[s.voiceChannel]) occupancy[s.voiceChannel] = []
+      occupancy[s.voiceChannel].push(s.user.nickname)
+    }
+  }
+  return occupancy
+}
+
 function registerVoiceHandlers(io, socket) {
   socket.on('voice:join', (channelId) => {
     socket.join(`voice:${channelId}`)
@@ -16,6 +27,8 @@ function registerVoiceHandlers(io, socket) {
       socketId: socket.id,
       nickname: socket.user.nickname,
     })
+
+    io.emit('voice:occupancy', buildOccupancy(io))
   })
 
   socket.on('voice:leave', () => {
@@ -23,6 +36,7 @@ function registerVoiceHandlers(io, socket) {
       socket.to(`voice:${socket.voiceChannel}`).emit('voice:user-left', { socketId: socket.id })
       socket.leave(`voice:${socket.voiceChannel}`)
       socket.voiceChannel = null
+      io.emit('voice:occupancy', buildOccupancy(io))
     }
   })
 

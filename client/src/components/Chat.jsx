@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSocket } from '../contexts/SocketContext'
+import { useUserColor } from '../contexts/AuthContext'
+import { loadSettings } from '../utils'
 import MessageInput from './MessageInput'
 
-export default function Chat({ channel }) {
+export default function Chat({ channel, onUserClick }) {
   const socket = useSocket()
+  const getColor = useUserColor()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const bottomRef = useRef(null)
@@ -61,7 +64,10 @@ export default function Chat({ channel }) {
 
   function formatTime(ts) {
     const d = new Date(ts * 1000)
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const settings = loadSettings()
+    const opts = { hour: '2-digit', minute: '2-digit' }
+    if (settings.showSeconds) opts.second = '2-digit'
+    return d.toLocaleTimeString([], opts)
   }
 
   function isImage(mimetype) {
@@ -85,10 +91,22 @@ export default function Chat({ channel }) {
         ) : (
           messages.map((msg) => (
             <div key={msg.id} className="message">
-              <div className="message-avatar">{msg.nickname[0]?.toUpperCase()}</div>
+              <div
+                className="message-avatar clickable"
+                style={{ background: getColor(msg.nickname) }}
+                onClick={(e) => onUserClick?.({ user: msg.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
+              >
+                {msg.nickname[0]?.toUpperCase()}
+              </div>
               <div className="message-body">
                 <div className="message-header">
-                  <span className="message-nick">{msg.nickname}</span>
+                  <span
+                    className="message-nick clickable"
+                    style={{ color: getColor(msg.nickname) }}
+                    onClick={(e) => onUserClick?.({ user: msg.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
+                  >
+                    {msg.nickname}
+                  </span>
                   <span className="message-time">{formatTime(msg.created_at)}</span>
                   <button className="message-delete" onClick={() => handleDeleteMessage(msg.id)} title="Delete">
                     ×

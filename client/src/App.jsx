@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { io } from 'socket.io-client'
 import { AuthContext } from './contexts/AuthContext'
 import { SocketContext } from './contexts/SocketContext'
+import { VoiceProvider } from './contexts/VoiceContext'
+import { nicknameToColor, loadSettings } from './utils'
 import AuthGate from './components/AuthGate'
 import MainLayout from './pages/MainLayout'
 
@@ -9,7 +11,8 @@ export default function App() {
   const [auth, setAuth] = useState(() => {
     const token = localStorage.getItem('token')
     const nickname = localStorage.getItem('nickname')
-    return token ? { token, nickname, ready: false } : null
+    const avatarColor = loadSettings().avatarColor || nicknameToColor(nickname || '')
+    return token ? { token, nickname, ready: false, avatarColor, userColors: {} } : null
   })
   const [socket, setSocket] = useState(null)
 
@@ -26,6 +29,11 @@ export default function App() {
       .then((data) => {
         if (data.valid) {
           const s = io({ auth: { token: auth.token }, transports: ['websocket'] })
+
+          s.on('user:colors', (colors) => {
+            setAuth((a) => a ? { ...a, userColors: colors } : a)
+          })
+
           setSocket(s)
           setAuth((a) => ({ ...a, ready: true }))
         } else {
@@ -46,9 +54,10 @@ export default function App() {
   }, [auth?.token])
 
   function handleLogin(token, nickname) {
+    const avatarColor = loadSettings().avatarColor || nicknameToColor(nickname)
     localStorage.setItem('token', token)
     localStorage.setItem('nickname', nickname)
-    setAuth({ token, nickname, ready: false })
+    setAuth({ token, nickname, ready: false, avatarColor, userColors: {} })
   }
 
   function handleLogout() {
@@ -59,6 +68,11 @@ export default function App() {
     setSocket(null)
   }
 
+  function updateAvatarColor(color) {
+    setAuth((a) => a ? { ...a, avatarColor: color } : a)
+    if (socket) socket.emit('user:color', color)
+  }
+
   if (!auth) {
     return <AuthGate onLogin={handleLogin} />
   }
@@ -67,10 +81,17 @@ export default function App() {
     return <div className="loading">Connecting...</div>
   }
 
+  const existingSocket = socket
+  if (auth.avatarColor && auth.nickname) {
+    setTimeout(() => existingSocket.emit('user:color', auth.avatarColor), 500)
+  }
+
   return (
-    <AuthContext.Provider value={{ ...auth, logout: handleLogout }}>
+    <AuthContext.Provider value={{ ...auth, logout: handleLogout, updateAvatarColor }}>
       <SocketContext.Provider value={socket}>
-        <MainLayout />
+        <VoiceProvider>
+          <MainLayout />
+        </VoiceProvider>
       </SocketContext.Provider>
     </AuthContext.Provider>
   )

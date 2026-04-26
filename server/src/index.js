@@ -38,6 +38,11 @@ migrate()
 startPurgeInterval()
 
 const onlineUsers = new Map()
+const userColors = new Map()
+
+function broadcastColors() {
+  io.emit('user:colors', Object.fromEntries(userColors))
+}
 
 io.use(socketAuthMiddleware)
 
@@ -48,8 +53,15 @@ io.on('connection', (socket) => {
   console.log(`[socket] ${nickname} connected (${socket.id})`)
   io.emit('users:update', Array.from(onlineUsers.values()))
 
+  socket.emit('user:colors', Object.fromEntries(userColors))
+
   registerChatHandlers(io, socket)
   registerVoiceHandlers(io, socket)
+
+  socket.on('user:color', (color) => {
+    userColors.set(nickname, color)
+    broadcastColors()
+  })
 
   socket.on('channel:created', (channel) => {
     socket.broadcast.emit('channel:created', channel)
@@ -65,9 +77,18 @@ io.on('connection', (socket) => {
 
     if (socket.voiceChannel) {
       socket.to(`voice:${socket.voiceChannel}`).emit('voice:user-left', { socketId: socket.id })
+      const { buildOccupancy } = require('./socket/voice')
+      io.emit('voice:occupancy', buildOccupancy(io))
     }
 
+    let stillOnline = false
+    for (const [, nick] of onlineUsers) {
+      if (nick === nickname) { stillOnline = true; break }
+    }
+    if (!stillOnline) userColors.delete(nickname)
+
     io.emit('users:update', Array.from(onlineUsers.values()))
+    broadcastColors()
   })
 })
 

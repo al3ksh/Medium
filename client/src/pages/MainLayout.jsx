@@ -1,18 +1,26 @@
-import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useState, useEffect } from 'react'
+import { useAuth, useAvatarColor } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
+import { useVoice } from '../contexts/VoiceContext'
+import { nicknameToColor } from '../utils'
 import ChannelList from '../components/ChannelList'
 import Chat from '../components/Chat'
 import VoiceChannel from '../components/VoiceChannel'
 import UserList from '../components/UserList'
+import SettingsModal from '../components/SettingsModal'
+import UserProfilePopup from '../components/UserProfilePopup'
 
 export default function MainLayout() {
   const { nickname, logout } = useAuth()
   const socket = useSocket()
+  const { joined, voiceChannel, leaveVoice } = useVoice()
+  const avatarColor = useAvatarColor()
   const [channels, setChannels] = useState([])
   const [activeChannel, setActiveChannel] = useState(null)
   const [users, setUsers] = useState([])
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [userPopup, setUserPopup] = useState(null)
 
   useEffect(() => {
     fetch('/api/channels', {
@@ -84,13 +92,20 @@ export default function MainLayout() {
         />
 
         <div className="sidebar-footer">
-          <div className="user-info">
-            <div className="user-avatar">{nickname[0]?.toUpperCase()}</div>
+          <div className="user-info" onClick={(e) => setUserPopup({ user: nickname, x: e.clientX + 10, y: e.clientY - 200 })}>
+            <div className="user-avatar" style={{ background: avatarColor }}>{nickname[0]?.toUpperCase()}</div>
             <span className="user-name">{nickname}</span>
           </div>
-          <button className="logout-btn" onClick={logout} title="Logout">
-            &#x2715;
-          </button>
+          <div className="footer-actions">
+            {joined && (
+              <button className="footer-btn disconnect" onClick={leaveVoice} title="Disconnect Voice">
+                📞
+              </button>
+            )}
+            <button className="footer-btn" onClick={() => setShowSettings(true)} title="User Settings">
+              ⚙
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -104,16 +119,26 @@ export default function MainLayout() {
             <p>Pick a channel to start talking</p>
           </div>
         ) : activeChannel.type === 'text' ? (
-          <Chat key={activeChannel.id} channel={activeChannel} />
+          <Chat key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} />
         ) : (
-          <VoiceChannel key={activeChannel.id} channel={activeChannel} />
+          <VoiceChannel key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} />
         )}
       </main>
 
       <aside className="user-panel">
         <h3 className="panel-header">Members — {users.length}</h3>
-        <UserList users={users} />
+        <UserList users={users} onUserClick={setUserPopup} />
       </aside>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {userPopup && (
+        <UserProfilePopup
+          user={userPopup.user}
+          x={userPopup.x}
+          y={userPopup.y}
+          onClose={() => setUserPopup(null)}
+        />
+      )}
     </div>
   )
 }
