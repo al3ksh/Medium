@@ -51,6 +51,14 @@ io.on('connection', (socket) => {
   registerChatHandlers(io, socket)
   registerVoiceHandlers(io, socket)
 
+  socket.on('channel:created', (channel) => {
+    socket.broadcast.emit('channel:created', channel)
+  })
+
+  socket.on('channel:deleted', (channelId) => {
+    socket.broadcast.emit('channel:deleted', channelId)
+  })
+
   socket.on('disconnect', () => {
     console.log(`[socket] ${nickname} disconnected (${socket.id})`)
     onlineUsers.delete(socket.id)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function ChannelList({ label, channels, activeId, onSelect, type, socket }) {
+export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const token = localStorage.getItem('token')
@@ -20,8 +20,8 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
 
     if (res.ok) {
       const channel = await res.json()
-      socket.emit('channel:broadcast-created', channel)
-      setChannels?.(channel)
+      socket.emit('channel:created', channel)
+      onChannelCreated?.(channel)
     }
 
     setNewName('')
@@ -38,7 +38,8 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
     })
 
     if (res.ok) {
-      socket.emit('channel:broadcast-deleted', channelId)
+      socket.emit('channel:deleted', channelId)
+      onChannelDeleted?.(channelId)
     }
   }
 

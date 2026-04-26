@@ -59,6 +59,11 @@ export default function MainLayout() {
           }}
           type="text"
           socket={socket}
+          onChannelCreated={(ch) => setChannels((prev) => [...prev, ch])}
+          onChannelDeleted={(id) => {
+            setChannels((prev) => prev.filter((c) => c.id !== id))
+            if (activeChannel?.id === id) setActiveChannel(null)
+          }}
         />
 
         <ChannelList
@@ -71,6 +76,11 @@ export default function MainLayout() {
           }}
           type="voice"
           socket={socket}
+          onChannelCreated={(ch) => setChannels((prev) => [...prev, ch])}
+          onChannelDeleted={(id) => {
+            setChannels((prev) => prev.filter((c) => c.id !== id))
+            if (activeChannel?.id === id) setActiveChannel(null)
+          }}
         />
 
         <div className="sidebar-footer">
