@@ -1,10 +1,20 @@
 import { useVoice } from '../contexts/VoiceContext'
 import { useAvatarColor, useUserColor } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
-import { Volume2 } from 'lucide-react'
+import { Volume2, Mic, MicOff, Headphones, PhoneOff } from 'lucide-react'
+
+function SignalBars({ ping }) {
+  return (
+    <div className="signal-bars" title={`${ping}ms`} data-quality={ping <= 70 ? '4' : ping <= 150 ? '3' : ping <= 300 ? '2' : '1'}>
+      {[1, 2, 3, 4].map((level) => (
+        <div key={level} className={`signal-bar ${ping <= (level === 1 ? 300 : level === 2 ? 150 : level === 3 ? 70 : 0) ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
+      ))}
+    </div>
+  )
+}
 
 export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }) {
-  const { joined, voiceChannel, peers, speaking, joinVoice, leaveVoice, nickname, socketId } = useVoice()
+  const { joined, voiceChannel, peers, speaking, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
   const selfColor = useAvatarColor()
   const getColor = useUserColor()
   const isActive = joined && voiceChannel?.id === channel.id
@@ -23,6 +33,8 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
           >
             <div className={`voice-avatar speaking-${speaking[socketId] ? 'active' : 'idle'}`} style={{ background: selfColor }}>
               {nickname[0]?.toUpperCase()}
+              {isMuted && <MicOff size={10} className="voice-status-icon" />}
+              {isDeafened && !isMuted && <Headphones size={10} className="voice-status-icon deafened" />}
             </div>
             <span>{nickname} (you)</span>
           </div>
@@ -57,9 +69,23 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
             Join Voice
           </button>
         ) : (
-          <button className="voice-leave-btn" onClick={leaveVoice}>
-            Leave Voice
-          </button>
+          <div className="voice-toolbar">
+            <div className="voice-connected-info">
+              <span className="voice-connected-label">Voice Connected</span>
+              {ping !== null && <SignalBars ping={ping} />}
+            </div>
+            <div className="voice-toolbar-actions">
+              <button className={`voice-tool-btn ${isMuted ? 'active' : ''}`} onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
+                {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+              </button>
+              <button className={`voice-tool-btn deafen ${isDeafened ? 'active' : ''}`} onClick={toggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'}>
+                <Headphones size={18} />
+              </button>
+              <button className="voice-tool-btn disconnect" onClick={leaveVoice} title="Disconnect">
+                <PhoneOff size={18} />
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

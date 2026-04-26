@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { PhoneOff, Settings, Menu } from 'lucide-react'
+import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones } from 'lucide-react'
 import { useAuth, useAvatarColor } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
@@ -15,7 +15,7 @@ import UserContextMenu from '../components/UserContextMenu'
 export default function MainLayout() {
   const { nickname, logout } = useAuth()
   const socket = useSocket()
-  const { joined, voiceChannel, leaveVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume } = useVoice()
+  const { joined, voiceChannel, leaveVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
   const avatarColor = useAvatarColor()
   const [channels, setChannels] = useState([])
   const [activeChannel, setActiveChannel] = useState(null)
@@ -121,9 +121,24 @@ export default function MainLayout() {
           </div>
           <div className="footer-actions">
             {joined && (
-              <button className="footer-btn disconnect" onClick={leaveVoice} title="Disconnect Voice">
-                <PhoneOff size={16} />
-              </button>
+              <>
+                <button className={`footer-btn ${isMuted ? 'active' : ''}`} onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
+                  {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+                </button>
+                <button className={`footer-btn deafen ${isDeafened ? 'active' : ''}`} onClick={toggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'}>
+                  <Headphones size={16} />
+                </button>
+                <button className="footer-btn disconnect" onClick={leaveVoice} title="Disconnect Voice">
+                  <PhoneOff size={16} />
+                </button>
+                {ping !== null && (
+                  <div className="signal-bars" title={`${ping}ms`} data-quality={ping <= 70 ? '4' : ping <= 150 ? '3' : ping <= 300 ? '2' : '1'}>
+                    {[1, 2, 3, 4].map((level) => (
+                      <div key={level} className={`signal-bar ${ping <= (level === 1 ? 300 : level === 2 ? 150 : level === 3 ? 70 : 0) ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
             <button className="footer-btn" onClick={() => setShowSettings(true)} title="User Settings">
               <Settings size={16} />

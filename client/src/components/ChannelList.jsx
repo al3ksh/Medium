@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Hash, Volume2, Plus, X } from 'lucide-react'
+import { Hash, Volume2, Plus, X, MicOff, Headphones } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useUserColor } from '../contexts/AuthContext'
 
 export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onUserClick, onUserContextMenu }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const { occupancy, joined, voiceChannel, leaveVoice, nickname } = useVoice()
+  const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened } = useVoice()
   const getColor = useUserColor()
   const token = localStorage.getItem('token')
 
@@ -108,6 +108,8 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                   >
                     <div className="voice-user-avatar" style={{ background: getColor(name) }}>{name[0]?.toUpperCase()}</div>
                     <span>{name}{name === nickname ? ' (you)' : ''}</span>
+                    {name === nickname && isMuted && <MicOff size={12} className="voice-user-status muted" />}
+                    {name === nickname && isDeafened && <Headphones size={12} className="voice-user-status deafened" />}
                   </div>
                 ))}
               </div>

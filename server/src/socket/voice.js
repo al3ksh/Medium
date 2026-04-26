@@ -60,6 +60,10 @@ function registerVoiceHandlers(io, socket) {
       })
     }
   })
+
+  socket.on('voice:ping', (timestamp) => {
+    socket.emit('voice:pong', timestamp)
+  })
 }
 
 module.exports = { registerVoiceHandlers }

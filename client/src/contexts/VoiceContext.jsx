@@ -14,10 +14,14 @@ export function VoiceProvider({ children }) {
   const [peers, setPeers] = useState([])
   const [speaking, setSpeaking] = useState({})
   const [occupancy, setOccupancy] = useState({})
+  const [isMuted, setIsMuted] = useState(false)
+  const [isDeafened, setIsDeafened] = useState(false)
+  const [ping, setPing] = useState(null)
   const peerConnections = useRef({})
   const localStream = useRef(null)
   const audioContext = useRef(null)
   const remoteAudioRefs = useRef({})
+  const pingInterval = useRef(null)
 
   function createPeerConnection(peerSocketId, isInitiator) {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
@@ -124,6 +128,9 @@ export function VoiceProvider({ children }) {
     socket.on('voice:signal', onSignal)
     socket.on('voice:speaking', onSpeaking)
     socket.on('voice:occupancy', setOccupancy)
+    socket.on('voice:pong', (timestamp) => {
+      setPing(Math.round(Date.now() - timestamp))
+    })
 
     return () => {
       socket.off('voice:peers', onPeers)
@@ -132,6 +139,7 @@ export function VoiceProvider({ children }) {
       socket.off('voice:signal', onSignal)
       socket.off('voice:speaking', onSpeaking)
       socket.off('voice:occupancy', setOccupancy)
+      socket.off('voice:pong')
     }
   }, [socket])
 
@@ -158,6 +166,11 @@ export function VoiceProvider({ children }) {
         requestAnimationFrame(detectSpeaking)
       }
       detectSpeaking()
+
+      pingInterval.current = setInterval(() => {
+        socket.emit('voice:ping', Date.now())
+      }, 5000)
+      socket.emit('voice:ping', Date.now())
     } catch (err) {
       console.error('Microphone access denied:', err)
     }
@@ -172,12 +185,19 @@ export function VoiceProvider({ children }) {
       audioContext.current.close()
       audioContext.current = null
     }
+    if (pingInterval.current) {
+      clearInterval(pingInterval.current)
+      pingInterval.current = null
+    }
     Object.values(peerConnections.current).forEach((pc) => pc.close())
     peerConnections.current = {}
     setJoined(false)
     setVoiceChannel(null)
     setPeers([])
     setSpeaking({})
+    setIsMuted(false)
+    setIsDeafened(false)
+    setPing(null)
     socket.emit('voice:leave')
   }
 
@@ -228,6 +248,32 @@ export function VoiceProvider({ children }) {
     return parseInt(localStorage.getItem(`user-volume:${peerNickname}`) || '100')
   }
 
+  function toggleMute() {
+    if (!localStream.current) return
+    const next = !isMuted
+    localStream.current.getAudioTracks().forEach((t) => { t.enabled = !next })
+    setIsMuted(next)
+  }
+
+  function toggleDeafen() {
+    const next = !isDeafened
+    setIsDeafened(next)
+    Object.values(remoteAudioRefs.current).forEach((audio) => {
+      if (audio) audio.muted = next
+    })
+    if (next && !isMuted) {
+      if (localStream.current) {
+        localStream.current.getAudioTracks().forEach((t) => { t.enabled = false })
+      }
+      setIsMuted(true)
+    } else if (!next && isMuted) {
+      if (localStream.current) {
+        localStream.current.getAudioTracks().forEach((t) => { t.enabled = true })
+      }
+      setIsMuted(false)
+    }
+  }
+
   return (
     <VoiceContext.Provider value={{
       joined,
@@ -244,6 +290,11 @@ export function VoiceProvider({ children }) {
       toggleUserMute,
       isUserMuted,
       getUserVolume,
+      isMuted,
+      isDeafened,
+      toggleMute,
+      toggleDeafen,
+      ping,
     }}>
       {children}
       {joined && peers.map((p) => (
