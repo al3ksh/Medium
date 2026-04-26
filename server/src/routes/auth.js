@@ -26,7 +26,7 @@ router.post('/login', (req, res) => {
   res.json({ token, nickname })
 })
 
-router.post('/verify', (req, res) => {
+router.get('/verify', (req, res) => {
   const header = req.headers.authorization
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ valid: false })
