@@ -164,10 +164,10 @@ export function VoiceProvider({ children }) {
       const constraints = settings.inputDevice
         ? { audio: { deviceId: { exact: settings.inputDevice } } }
         : { audio: true }
-      const rawStream = await navigator.mediaDevices.getUserMedia(constraints)
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
 
       audioContext.current = new AudioContext()
-      const source = audioContext.current.createMediaStreamSource(rawStream)
+      const source = audioContext.current.createMediaStreamSource(stream)
       const inputGain = audioContext.current.createGain()
       inputGain.gain.value = (settings.inputVolume ?? 100) / 100
 
@@ -181,7 +181,7 @@ export function VoiceProvider({ children }) {
       inputGain.connect(analyser)
 
       localStream.current = dest.stream
-      rawStream.current = rawStream
+      rawStream.current = stream
 
       setVoiceChannel(channel)
       setJoined(true)

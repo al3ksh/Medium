@@ -55,13 +55,13 @@ function CheckboxSwitch({ checked, onChange }) {
 }
 
 function AppearanceTab({ settings, onUpdate }) {
-  const currentTheme = settings.theme || 'dark'
-  const customTheme = settings.customTheme || { ...THEMES.dark.vars }
+  const currentTheme = settings.theme || 'amoled'
+  const customTheme = settings.customTheme || { ...THEMES.amoled.vars }
 
   function selectTheme(name) {
     const patch = { theme: name }
     if (name === 'custom' && !settings.customTheme) {
-      patch.customTheme = { ...THEMES.dark.vars }
+      patch.customTheme = { ...THEMES.amoled.vars }
     }
     onUpdate(patch)
     applyTheme(name, patch.customTheme || settings.customTheme)

@@ -11,27 +11,50 @@ import UserList from '../components/UserList'
 import SettingsModal from '../components/SettingsModal'
 import UserProfilePopup from '../components/UserProfilePopup'
 import UserContextMenu from '../components/UserContextMenu'
+import ChannelContextMenu from '../components/ChannelContextMenu'
+import ConfirmModal from '../components/ConfirmModal'
+import CreateChannelModal from '../components/CreateChannelModal'
 
 export default function MainLayout() {
   const { nickname, logout } = useAuth()
   const socket = useSocket()
-  const { joined, voiceChannel, leaveVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
+  const { joined, voiceChannel, leaveVoice, joinVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
   const avatarColor = useAvatarColor()
   const getAvatar = useUserAvatar()
   const [channels, setChannels] = useState([])
-  const [activeChannel, setActiveChannel] = useState(null)
+  const [activeChannel, setActiveChannelRaw] = useState(null)
+
+  function setActiveChannel(ch) {
+    setActiveChannelRaw(ch)
+    if (ch) {
+      localStorage.setItem('active-channel', JSON.stringify({ id: ch.id, name: ch.name, type: ch.type }))
+    } else {
+      localStorage.removeItem('active-channel')
+    }
+  }
   const [users, setUsers] = useState([])
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [userPopup, setUserPopup] = useState(null)
   const [contextMenu, setContextMenu] = useState(null)
+  const [channelContextMenu, setChannelContextMenu] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null)
+  const [createModal, setCreateModal] = useState(null)
 
   useEffect(() => {
     fetch('/api/channels', {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     })
       .then((r) => r.json())
-      .then(setChannels)
+      .then((chs) => {
+        setChannels(chs)
+        try {
+          const saved = JSON.parse(localStorage.getItem('active-channel'))
+          if (saved?.id && chs.some(c => c.id === saved.id)) {
+            setActiveChannelRaw(chs.find(c => c.id === saved.id))
+          }
+        } catch {}
+      })
 
     socket.on('channel:created', (channel) => {
       setChannels((prev) => [...prev, channel])
@@ -42,11 +65,17 @@ export default function MainLayout() {
       if (activeChannel?.id === channelId) setActiveChannel(null)
     })
 
+    socket.on('channel:renamed', (updated) => {
+      setChannels((prev) => prev.map((c) => c.id === updated.id ? { ...c, name: updated.name } : c))
+      if (activeChannel?.id === updated.id) setActiveChannel((prev) => prev ? { ...prev, name: updated.name } : prev)
+    })
+
     socket.on('users:update', setUsers)
 
     return () => {
       socket.off('channel:created')
       socket.off('channel:deleted')
+      socket.off('channel:renamed')
       socket.off('users:update')
     }
   }, [])
@@ -68,6 +97,49 @@ export default function MainLayout() {
   const handleMuteToggle = useCallback((user) => {
     toggleUserMute(user)
   }, [toggleUserMute])
+
+  const handleChannelContextMenu = useCallback((e, channel) => {
+    e.preventDefault()
+    setChannelContextMenu({ channel, x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleChannelDelete = useCallback(async (channel) => {
+    setConfirmModal({
+      title: 'Delete Channel',
+      message: `Are you sure you want to delete #${channel.name}? This cannot be undone.`,
+      confirmLabel: 'Delete Channel',
+      danger: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/channels/${channel.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        })
+        if (res.ok) {
+          socket.emit('channel:deleted', channel.id)
+          setChannels((prev) => prev.filter((c) => c.id !== channel.id))
+          if (activeChannel?.id === channel.id) setActiveChannel(null)
+        }
+        setConfirmModal(null)
+      },
+    })
+  }, [socket, activeChannel])
+
+  const handleChannelEdit = useCallback(async (channelId, newName) => {
+    const res = await fetch(`/api/channels/${channelId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ name: newName }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      socket.emit('channel:renamed', updated)
+      setChannels((prev) => prev.map((c) => c.id === updated.id ? updated : c))
+      if (activeChannel?.id === updated.id) setActiveChannel(updated)
+    }
+  }, [socket, activeChannel])
 
   const textChannels = channels.filter((c) => c.type === 'text')
   const voiceChannels = channels.filter((c) => c.type === 'voice')
@@ -94,6 +166,8 @@ export default function MainLayout() {
             setChannels((prev) => prev.filter((c) => c.id !== id))
             if (activeChannel?.id === id) setActiveChannel(null)
           }}
+          onChannelContextMenu={handleChannelContextMenu}
+          onRequestCreate={() => {}}
         />
 
         <ChannelList
@@ -111,8 +185,10 @@ export default function MainLayout() {
             setChannels((prev) => prev.filter((c) => c.id !== id))
             if (activeChannel?.id === id) setActiveChannel(null)
           }}
+          onChannelContextMenu={handleChannelContextMenu}
           onUserClick={setUserPopup}
           onUserContextMenu={handleContextMenu}
+          onRequestCreate={() => {}}
         />
 
         <div className="sidebar-footer">
@@ -191,6 +267,53 @@ export default function MainLayout() {
           onMuteToggle={handleMuteToggle}
           onVolumeChange={handleVolumeChange}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+      {channelContextMenu && (
+        <ChannelContextMenu
+          channel={channelContextMenu.channel}
+          x={channelContextMenu.x}
+          y={channelContextMenu.y}
+          onOpen={(ch) => { setActiveChannel(ch); setShowMobileSidebar(false) }}
+          onJoinVoice={joinVoice}
+          onEdit={handleChannelEdit}
+          onCreate={() => {
+            setCreateModal({ type: channelContextMenu.channel.type })
+          }}
+          onDelete={handleChannelDelete}
+          onClose={() => setChannelContextMenu(null)}
+        />
+      )}
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel}
+          danger={confirmModal.danger}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+      {createModal && (
+        <CreateChannelModal
+          type={createModal.type}
+          onConfirm={async (name) => {
+            const res = await fetch('/api/channels', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('token')}`,
+              },
+              body: JSON.stringify({ name, type: createModal.type }),
+            })
+            if (res.ok) {
+              const ch = await res.json()
+              socket.emit('channel:created', ch)
+              setChannels((prev) => [...prev, ch])
+            }
+            setCreateModal(null)
+          }}
+          onCancel={() => setCreateModal(null)}
         />
       )}
     </div>

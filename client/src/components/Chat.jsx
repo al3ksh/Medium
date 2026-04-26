@@ -4,6 +4,7 @@ import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import MessageInput from './MessageInput'
+import ConfirmModal from './ConfirmModal'
 
 export default function Chat({ channel, users, nickname, onUserClick, onUserContextMenu }) {
   const socket = useSocket()
@@ -13,7 +14,9 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [loading, setLoading] = useState(true)
   const [imageViewer, setImageViewer] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
   const bottomRef = useRef(null)
+  const prevMsgCount = useRef(0)
   const token = localStorage.getItem('token')
 
   useEffect(() => {
@@ -49,7 +52,14 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   }, [channel.id])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length > prevMsgCount.current) {
+      const instant = prevMsgCount.current === 0
+      bottomRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' })
+      if (instant) {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' }), 100)
+      }
+    }
+    prevMsgCount.current = messages.length
   }, [messages])
 
   function handleSend(content, attachmentData) {
@@ -64,8 +74,17 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
     setReplyTo(null)
   }
 
-  function handleDeleteMessage(id) {
-    socket.emit('message:delete', id)
+  function handleDeleteMessage(id, e) {
+    if (e?.shiftKey) {
+      socket.emit('message:delete', id)
+      return
+    }
+    setDeleteConfirm(id)
+  }
+
+  function confirmDelete() {
+    socket.emit('message:delete', deleteConfirm)
+    setDeleteConfirm(null)
   }
 
   function renderContent(text) {
@@ -145,7 +164,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                     <button className="message-action" onClick={() => setReplyTo(msg)} title="Reply">
                       <Reply size={14} />
                     </button>
-                    <button className="message-action" onClick={() => handleDeleteMessage(msg.id)} title="Delete">
+                    <button className="message-action" onClick={(e) => handleDeleteMessage(msg.id, e)} title="Delete (hold Shift to skip confirmation)">
                       <X size={14} />
                     </button>
                   </div>
@@ -201,6 +220,18 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
             Open original
           </a>
         </div>
+      )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title="Delete Message"
+          message="Are you sure you want to delete this message?"
+          confirmLabel="Delete"
+          danger
+          tip="Hold Shift + Click to skip this confirmation"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirm(null)}
+        />
       )}
     </div>
   )

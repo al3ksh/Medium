@@ -151,6 +151,10 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('channel:deleted', channelId)
   })
 
+  socket.on('channel:renamed', (updated) => {
+    socket.broadcast.emit('channel:renamed', updated)
+  })
+
   socket.on('disconnect', () => {
     console.log(`[socket] ${nickname} disconnected (${socket.id})`)
     onlineUsers.delete(socket.id)

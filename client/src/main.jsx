@@ -5,7 +5,7 @@ import { loadSettings, applyTheme } from './utils'
 import './styles/index.css'
 
 const s = loadSettings()
-applyTheme(s.theme || 'dark', s.customTheme)
+applyTheme(s.theme || 'amoled', s.customTheme)
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

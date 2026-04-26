@@ -25,26 +25,6 @@ export function saveSettings(settings) {
 }
 
 export const THEMES = {
-  dark: {
-    label: 'Dark',
-    vars: {
-      '--bg-primary': '#313338',
-      '--bg-secondary': '#2b2d31',
-      '--bg-tertiary': '#1e1f22',
-      '--bg-input': '#383a40',
-      '--bg-hover': '#35373c',
-      '--bg-active': '#404249',
-      '--text-primary': '#f2f3f5',
-      '--text-secondary': '#b5bac1',
-      '--text-muted': '#949ba4',
-      '--accent': '#5865f2',
-      '--accent-hover': '#4752c4',
-      '--red': '#ed4245',
-      '--green': '#23a559',
-      '--yellow': '#f0b232',
-      '--border': '#3f4147',
-    }
-  },
   amoled: {
     label: 'AMOLED Black',
     vars: {
@@ -85,6 +65,26 @@ export const THEMES = {
       '--border': '#d4d6d9',
     }
   },
+  discord: {
+    label: 'thiscord?',
+    vars: {
+      '--bg-primary': '#313338',
+      '--bg-secondary': '#2b2d31',
+      '--bg-tertiary': '#1e1f22',
+      '--bg-input': '#383a40',
+      '--bg-hover': '#35373c',
+      '--bg-active': '#404249',
+      '--text-primary': '#f2f3f5',
+      '--text-secondary': '#b5bac1',
+      '--text-muted': '#949ba4',
+      '--accent': '#5865f2',
+      '--accent-hover': '#4752c4',
+      '--red': '#ed4245',
+      '--green': '#23a559',
+      '--yellow': '#f0b232',
+      '--border': '#3f4147',
+    }
+  },
 }
 
 export const THEME_VARS = [
@@ -114,7 +114,7 @@ export function applyTheme(themeName, customVars) {
     return
   }
 
-  for (const [k, v] of Object.entries(preset?.vars || THEMES.dark.vars)) {
+  for (const [k, v] of Object.entries(preset?.vars || THEMES.amoled.vars)) {
     root.style.setProperty(k, v)
   }
 }

@@ -39,4 +39,18 @@ router.delete('/:id', (req, res) => {
   res.json({ success: true })
 })
 
+router.patch('/:id', (req, res) => {
+  const { name } = req.body
+  if (!name || name.trim().length < 1 || name.length > 30) {
+    return res.status(400).json({ error: 'Channel name must be 1-30 characters' })
+  }
+  const existing = db.prepare('SELECT id FROM channels WHERE id = ?').get(req.params.id)
+  if (!existing) {
+    return res.status(404).json({ error: 'Channel not found' })
+  }
+  db.prepare('UPDATE channels SET name = ? WHERE id = ?').run(name.trim(), req.params.id)
+  const updated = db.prepare('SELECT * FROM channels WHERE id = ?').get(req.params.id)
+  res.json(updated)
+})
+
 module.exports = router

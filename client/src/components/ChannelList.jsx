@@ -3,7 +3,7 @@ import { Hash, Volume2, Plus, X, MicOff, Headphones } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 
-export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onUserClick, onUserContextMenu }) {
+export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened } = useVoice()
@@ -34,28 +34,13 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
     setCreating(false)
   }
 
-  async function handleDelete(channelId, e) {
-    e.stopPropagation()
-    if (!confirm('Delete this channel?')) return
-
-    const res = await fetch(`/api/channels/${channelId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    if (res.ok) {
-      socket.emit('channel:deleted', channelId)
-      onChannelDeleted?.(channelId)
-    }
-  }
-
   const ChannelIcon = type === 'text' ? Hash : Volume2
 
   return (
     <div className="channel-section">
       <div className="channel-section-header">
         <span>{label}</span>
-        <button className="channel-add-btn" onClick={() => setCreating(!creating)} title="Add channel">
+        <button className="channel-add-btn" onClick={() => { setCreating(!creating); onRequestCreate?.() }} title="Add channel">
           <Plus size={16} />
         </button>
       </div>
@@ -82,6 +67,7 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
             <div
               className={`channel-item ${activeId === ch.id ? 'active' : ''}`}
               onClick={() => onSelect(ch)}
+              onContextMenu={(e) => { e.preventDefault(); onChannelContextMenu?.(e, ch) }}
             >
               <span className="channel-icon"><ChannelIcon size={16} /></span>
               <span className="channel-name">{ch.name}</span>
@@ -94,9 +80,6 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                   <X size={12} />
                 </button>
               )}
-              <button className="channel-delete-btn" onClick={(e) => handleDelete(ch.id, e)} title="Delete">
-                <X size={14} />
-              </button>
             </div>
             {allUsers.length > 0 && (
               <div className="voice-users-list">
