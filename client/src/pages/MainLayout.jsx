@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth, useAvatarColor } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
@@ -9,11 +9,12 @@ import VoiceChannel from '../components/VoiceChannel'
 import UserList from '../components/UserList'
 import SettingsModal from '../components/SettingsModal'
 import UserProfilePopup from '../components/UserProfilePopup'
+import UserContextMenu from '../components/UserContextMenu'
 
 export default function MainLayout() {
   const { nickname, logout } = useAuth()
   const socket = useSocket()
-  const { joined, voiceChannel, leaveVoice } = useVoice()
+  const { joined, voiceChannel, leaveVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume } = useVoice()
   const avatarColor = useAvatarColor()
   const [channels, setChannels] = useState([])
   const [activeChannel, setActiveChannel] = useState(null)
@@ -21,6 +22,7 @@ export default function MainLayout() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [userPopup, setUserPopup] = useState(null)
+  const [contextMenu, setContextMenu] = useState(null)
 
   useEffect(() => {
     fetch('/api/channels', {
@@ -46,6 +48,24 @@ export default function MainLayout() {
       socket.off('users:update')
     }
   }, [])
+
+  const handleContextMenu = useCallback((e, user) => {
+    e.preventDefault()
+    setContextMenu({
+      user,
+      x: e.clientX,
+      y: e.clientY,
+    })
+  }, [])
+
+  const handleVolumeChange = useCallback((user, vol) => {
+    setUserVolume(user, vol)
+    setContextMenu((prev) => prev ? { ...prev, volume: vol } : null)
+  }, [setUserVolume])
+
+  const handleMuteToggle = useCallback((user) => {
+    toggleUserMute(user)
+  }, [toggleUserMute])
 
   const textChannels = channels.filter((c) => c.type === 'text')
   const voiceChannels = channels.filter((c) => c.type === 'voice')
@@ -89,6 +109,8 @@ export default function MainLayout() {
             setChannels((prev) => prev.filter((c) => c.id !== id))
             if (activeChannel?.id === id) setActiveChannel(null)
           }}
+          onUserClick={setUserPopup}
+          onUserContextMenu={handleContextMenu}
         />
 
         <div className="sidebar-footer">
@@ -119,15 +141,15 @@ export default function MainLayout() {
             <p>Pick a channel to start talking</p>
           </div>
         ) : activeChannel.type === 'text' ? (
-          <Chat key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} />
+          <Chat key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} />
         ) : (
-          <VoiceChannel key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} />
+          <VoiceChannel key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} />
         )}
       </main>
 
       <aside className="user-panel">
         <h3 className="panel-header">Members — {users.length}</h3>
-        <UserList users={users} onUserClick={setUserPopup} />
+        <UserList users={users} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} />
       </aside>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
@@ -137,6 +159,19 @@ export default function MainLayout() {
           x={userPopup.x}
           y={userPopup.y}
           onClose={() => setUserPopup(null)}
+        />
+      )}
+      {contextMenu && (
+        <UserContextMenu
+          user={contextMenu.user}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          volume={contextMenu.volume ?? getUserVolume(contextMenu.user)}
+          isMuted={isUserMuted(contextMenu.user)}
+          onProfile={(user) => setUserPopup({ user, x: contextMenu.x + 10, y: contextMenu.y - 200 })}
+          onMuteToggle={handleMuteToggle}
+          onVolumeChange={handleVolumeChange}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>

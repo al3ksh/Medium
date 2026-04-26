@@ -1159,6 +1159,84 @@ body {
   color: white;
 }
 
+/* ========== CONTEXT MENU ========== */
+
+.context-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+}
+
+.context-menu {
+  position: fixed;
+  min-width: 200px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  padding: 6px 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 401;
+}
+
+.context-item {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 2px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-item:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.context-item.danger:hover {
+  background: var(--red);
+}
+
+.context-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.context-item-static {
+  padding: 6px 8px;
+}
+
+.context-volume-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+}
+
+.context-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-volume-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.context-volume-row span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 35px;
+  text-align: right;
+}
+
 /* ========== SCROLLBAR ========== */
 
 ::-webkit-scrollbar {

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useUserColor } from '../contexts/AuthContext'
 
-export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted }) {
+export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onUserClick, onUserContextMenu }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const { occupancy, joined, voiceChannel, leaveVoice, nickname } = useVoice()
@@ -99,7 +99,12 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
             {allUsers.length > 0 && (
               <div className="voice-users-list">
                 {allUsers.map((name, i) => (
-                  <div key={`${name}-${i}`} className="voice-user-item">
+                  <div
+                    key={`${name}-${i}`}
+                    className="voice-user-item clickable"
+                    onClick={(e) => onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 })}
+                    onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, name) }}
+                  >
                     <div className="voice-user-avatar" style={{ background: getColor(name) }}>{name[0]?.toUpperCase()}</div>
                     <span>{name}{name === nickname ? ' (you)' : ''}</span>
                   </div>

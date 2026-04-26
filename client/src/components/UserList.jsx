@@ -1,6 +1,6 @@
 import { useUserColor } from '../contexts/AuthContext'
 
-export default function UserList({ users, onUserClick }) {
+export default function UserList({ users, onUserClick, onUserContextMenu }) {
   const unique = [...new Set(users)]
   const getColor = useUserColor()
 
@@ -11,6 +11,7 @@ export default function UserList({ users, onUserClick }) {
           key={`${name}-${i}`}
           className="user-item clickable"
           onClick={(e) => onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 })}
+          onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, name) }}
         >
           <div className="user-avatar small" style={{ background: getColor(name) }}>
             {name[0]?.toUpperCase()}

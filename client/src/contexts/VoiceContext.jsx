@@ -181,24 +181,51 @@ export function VoiceProvider({ children }) {
     socket.emit('voice:leave')
   }
 
-  function getAudioRef(socketId) {
-    if (!remoteAudioRefs.current[socketId]) {
-      remoteAudioRefs.current[socketId] = null
-    }
-    return (el) => {
-      remoteAudioRefs.current[socketId] = el
-      if (el) {
-        for (const [, pc] of Object.entries(peerConnections.current)) {
-          const receivers = pc.getReceivers()
-          if (receivers.length > 0) {
-            const stream = new MediaStream(receivers.map((r) => r.track).filter(Boolean))
-            if (stream.getTracks().length > 0) {
-              el.srcObject = stream
-            }
+  function applyUserAudio(nickname) {
+    const vol = localStorage.getItem(`user-volume:${nickname}`)
+    const muted = localStorage.getItem(`user-muted:${nickname}`) === 'true'
+    for (const [, pc] of Object.entries(peerConnections.current)) {
+      const receivers = pc.getReceivers()
+      if (receivers.length > 0) {
+        const stream = new MediaStream(receivers.map((r) => r.track).filter(Boolean))
+        if (stream.getTracks().length > 0) {
+          const audio = remoteAudioRefs.current[Object.keys(peerConnections.current).find(k => peerConnections.current[k] === pc)]
+          if (audio) {
+            audio.volume = Math.min((vol ? parseInt(vol) : 100) / 100, 2)
+            audio.muted = muted
           }
         }
       }
     }
+  }
+
+  function setUserVolume(peerNickname, volume) {
+    localStorage.setItem(`user-volume:${peerNickname}`, volume)
+    const peer = peers.find((p) => p.nickname === peerNickname)
+    if (peer) {
+      const audio = remoteAudioRefs.current[peer.socketId]
+      if (audio) audio.volume = Math.min(volume / 100, 2)
+    }
+  }
+
+  function toggleUserMute(peerNickname) {
+    const current = localStorage.getItem(`user-muted:${peerNickname}`) === 'true'
+    const next = !current
+    localStorage.setItem(`user-muted:${peerNickname}`, String(next))
+    const peer = peers.find((p) => p.nickname === peerNickname)
+    if (peer) {
+      const audio = remoteAudioRefs.current[peer.socketId]
+      if (audio) audio.muted = next
+    }
+    return next
+  }
+
+  function isUserMuted(peerNickname) {
+    return localStorage.getItem(`user-muted:${peerNickname}`) === 'true'
+  }
+
+  function getUserVolume(peerNickname) {
+    return parseInt(localStorage.getItem(`user-volume:${peerNickname}`) || '100')
   }
 
   return (
@@ -213,7 +240,10 @@ export function VoiceProvider({ children }) {
       remoteAudioRefs,
       nickname,
       socketId: socket?.id,
-      getAudioRef,
+      setUserVolume,
+      toggleUserMute,
+      isUserMuted,
+      getUserVolume,
     }}>
       {children}
       {joined && peers.map((p) => (

@@ -37,8 +37,8 @@ export default function UserProfilePopup({ user, x, y, onClose }) {
         className="user-popup"
         ref={popupRef}
         style={{
-          left: Math.min(x, window.innerWidth - 300),
-          top: Math.min(y, window.innerHeight - 350),
+          left: Math.max(16, Math.min(x, window.innerWidth - 300)),
+          top: Math.max(16, Math.min(y, window.innerHeight - 400)),
         }}
       >
         <div className="user-popup-banner" style={{ background: color }} />

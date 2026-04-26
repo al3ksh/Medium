@@ -4,7 +4,7 @@ import { useUserColor } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import MessageInput from './MessageInput'
 
-export default function Chat({ channel, onUserClick }) {
+export default function Chat({ channel, onUserClick, onUserContextMenu }) {
   const socket = useSocket()
   const getColor = useUserColor()
   const [messages, setMessages] = useState([])
@@ -95,6 +95,7 @@ export default function Chat({ channel, onUserClick }) {
                 className="message-avatar clickable"
                 style={{ background: getColor(msg.nickname) }}
                 onClick={(e) => onUserClick?.({ user: msg.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
+                    onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, msg.nickname) }}
               >
                 {msg.nickname[0]?.toUpperCase()}
               </div>
@@ -104,6 +105,7 @@ export default function Chat({ channel, onUserClick }) {
                     className="message-nick clickable"
                     style={{ color: getColor(msg.nickname) }}
                     onClick={(e) => onUserClick?.({ user: msg.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
+                onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, msg.nickname) }}
                   >
                     {msg.nickname}
                   </span>

@@ -2,7 +2,7 @@ import { useVoice } from '../contexts/VoiceContext'
 import { useAvatarColor, useUserColor } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
 
-export default function VoiceChannel({ channel, onUserClick }) {
+export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }) {
   const { joined, voiceChannel, peers, speaking, joinVoice, leaveVoice, nickname, socketId } = useVoice()
   const selfColor = useAvatarColor()
   const getColor = useUserColor()
@@ -32,6 +32,7 @@ export default function VoiceChannel({ channel, onUserClick }) {
             key={p.socketId}
             className="voice-peer clickable"
             onClick={(e) => onUserClick?.({ user: p.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
+            onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, p.nickname) }}
           >
             <div className={`voice-avatar speaking-${speaking[p.socketId] ? 'active' : 'idle'}`} style={{ background: getColor(p.nickname) }}>
               {p.nickname[0]?.toUpperCase()}
