@@ -32,6 +32,11 @@ function migrate() {
     CREATE INDEX IF NOT EXISTS idx_messages_channel_created
       ON messages(channel_id, created_at);
 
+    CREATE TABLE IF NOT EXISTS user_bios (
+      nickname TEXT PRIMARY KEY,
+      bio TEXT NOT NULL DEFAULT ''
+    );
+
     INSERT OR IGNORE INTO channels (id, name, type) VALUES ('general', 'general', 'text');
   `)
 }

@@ -5,7 +5,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const path = require('path')
 
-const { migrate } = require('./db')
+const { db, migrate } = require('./db')
 const { socketAuthMiddleware } = require('./middleware/auth')
 const { startPurgeInterval } = require('./services/purge')
 const { registerChatHandlers } = require('./socket/chat')
@@ -37,8 +37,18 @@ app.get('/api/health', (req, res) => {
 migrate()
 startPurgeInterval()
 
+const biosRows = db.prepare('SELECT nickname, bio FROM user_bios').all()
+for (const row of biosRows) {
+  if (row.bio) userBios.set(row.nickname, row.bio)
+}
+
 const onlineUsers = new Map()
 const userColors = new Map()
+const userBios = new Map()
+
+function broadcastBios() {
+  io.emit('user:bios', Object.fromEntries(userBios))
+}
 
 function broadcastColors() {
   io.emit('user:colors', Object.fromEntries(userColors))
@@ -54,6 +64,7 @@ io.on('connection', (socket) => {
   io.emit('users:update', Array.from(onlineUsers.values()))
 
   socket.emit('user:colors', Object.fromEntries(userColors))
+  socket.emit('user:bios', Object.fromEntries(userBios))
 
   registerChatHandlers(io, socket)
   registerVoiceHandlers(io, socket)
@@ -61,6 +72,13 @@ io.on('connection', (socket) => {
   socket.on('user:color', (color) => {
     userColors.set(nickname, color)
     broadcastColors()
+  })
+
+  socket.on('user:bio', (bio) => {
+    const trimmed = (bio || '').slice(0, 190)
+    userBios.set(nickname, trimmed)
+    db.prepare('INSERT OR REPLACE INTO user_bios (nickname, bio) VALUES (?, ?)').run(nickname, trimmed)
+    broadcastBios()
   })
 
   socket.on('channel:created', (channel) => {
@@ -89,6 +107,7 @@ io.on('connection', (socket) => {
 
     io.emit('users:update', Array.from(onlineUsers.values()))
     broadcastColors()
+    broadcastBios()
   })
 })
 

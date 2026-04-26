@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useVoice } from '../contexts/VoiceContext'
+import { useSocket } from '../contexts/SocketContext'
 import { nicknameToColor, loadSettings, saveSettings } from '../utils'
-import { X } from 'lucide-react'
+import { X, LogOut } from 'lucide-react'
 
 const TABS = [
   { id: 'account', label: 'My Account' },
@@ -37,7 +38,7 @@ export default function SettingsModal({ onClose }) {
           ))}
           <div className="settings-sidebar-sep" />
           <button className="settings-tab logout" onClick={() => { onClose(); logout() }}>
-            Log Out
+            <LogOut size={16} /> Log Out
           </button>
         </div>
 
@@ -54,8 +55,15 @@ export default function SettingsModal({ onClose }) {
 }
 
 function AccountTab({ settings, onUpdate }) {
-  const { nickname, avatarColor, updateAvatarColor } = useAuth()
+  const { nickname, avatarColor, updateAvatarColor, userBios } = useAuth()
+  const socket = useSocket()
   const color = avatarColor || nicknameToColor(nickname)
+  const currentBio = userBios?.[nickname] || ''
+
+  function handleBioChange(e) {
+    const bio = e.target.value.slice(0, 190)
+    socket.emit('user:bio', bio)
+  }
 
   return (
     <div className="settings-section">
@@ -69,8 +77,20 @@ function AccountTab({ settings, onUpdate }) {
           <div className="account-details">
             <span className="account-name">{nickname}</span>
             <span className="account-tag">@{nickname.toLowerCase().replace(/\s/g, '-')}</span>
-          </div>
-        </div>
+      </div>
+
+      <div className="settings-group">
+        <label>About Me</label>
+        <textarea
+          className="bio-input"
+          rows={3}
+          maxLength={190}
+          placeholder="Tell others something about yourself..."
+          defaultValue={currentBio}
+          onBlur={handleBioChange}
+        />
+      </div>
+    </div>
       </div>
 
       <div className="settings-group">
@@ -158,29 +178,26 @@ function VoiceTab({ settings, onUpdate, voice }) {
 
       <div className="settings-group">
         <label>Input Volume</label>
-        <input
-          type="range" min="0" max="200" value={settings.inputVolume ?? 100}
-          onChange={(e) => onUpdate({ inputVolume: parseInt(e.target.value) })}
-        />
-        <span className="range-value">{settings.inputVolume ?? 100}%</span>
+        <div className="range-row">
+          <input type="range" min="0" max="200" value={settings.inputVolume ?? 100} onChange={(e) => onUpdate({ inputVolume: parseInt(e.target.value) })} />
+          <span className="range-value">{settings.inputVolume ?? 100}%</span>
+        </div>
       </div>
 
       <div className="settings-group">
         <label>Output Volume</label>
-        <input
-          type="range" min="0" max="200" value={settings.outputVolume ?? 100}
-          onChange={(e) => onUpdate({ outputVolume: parseInt(e.target.value) })}
-        />
-        <span className="range-value">{settings.outputVolume ?? 100}%</span>
+        <div className="range-row">
+          <input type="range" min="0" max="200" value={settings.outputVolume ?? 100} onChange={(e) => onUpdate({ outputVolume: parseInt(e.target.value) })} />
+          <span className="range-value">{settings.outputVolume ?? 100}%</span>
+        </div>
       </div>
 
       <div className="settings-group">
         <label>Input Sensitivity</label>
-        <input
-          type="range" min="1" max="100" value={settings.inputSensitivity ?? 10}
-          onChange={(e) => onUpdate({ inputSensitivity: parseInt(e.target.value) })}
-        />
-        <span className="range-value">{settings.inputSensitivity ?? 10}</span>
+        <div className="range-row">
+          <input type="range" min="1" max="100" value={settings.inputSensitivity ?? 10} onChange={(e) => onUpdate({ inputSensitivity: parseInt(e.target.value) })} />
+          <span className="range-value">{settings.inputSensitivity ?? 10}</span>
+        </div>
       </div>
 
       <div className="settings-group">
@@ -224,11 +241,10 @@ function NotificationsTab({ settings, onUpdate }) {
 
       <div className="settings-group">
         <label>Message Sound Volume</label>
-        <input
-          type="range" min="0" max="100" value={settings.soundVolume ?? 80}
-          onChange={(e) => onUpdate({ soundVolume: parseInt(e.target.value) })}
-        />
-        <span className="range-value">{settings.soundVolume ?? 80}%</span>
+        <div className="range-row">
+          <input type="range" min="0" max="100" value={settings.soundVolume ?? 80} onChange={(e) => onUpdate({ soundVolume: parseInt(e.target.value) })} />
+          <span className="range-value">{settings.soundVolume ?? 80}%</span>
+        </div>
       </div>
     </div>
   )

@@ -20,3 +20,8 @@ export function useUserColor() {
     return nicknameToColor(name)
   }
 }
+
+export function useUserBio() {
+  const auth = useContext(AuthContext)
+  return (name) => auth?.userBios?.[name] || ''
+}

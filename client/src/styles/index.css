@@ -914,6 +914,9 @@ body {
 .settings-tab.logout {
   color: var(--red);
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .settings-sidebar-sep {
@@ -979,17 +982,21 @@ body {
 }
 
 .settings-group input[type="range"] {
-  width: calc(100% - 50px);
+  flex: 1;
   accent-color: var(--accent);
 }
 
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .range-value {
-  display: inline-block;
-  width: 45px;
-  text-align: right;
   font-size: 0.8rem;
   color: var(--text-muted);
-  margin-left: 0.5rem;
+  min-width: 40px;
+  text-align: right;
 }
 
 .toggle-label {
@@ -1044,6 +1051,11 @@ body {
   margin-bottom: -24px;
 }
 
+.account-details {
+  display: flex;
+  flex-direction: column;
+}
+
 .account-name {
   font-weight: 600;
   font-size: 1.1rem;
@@ -1078,6 +1090,24 @@ body {
 .color-swatch.active {
   border-color: white;
   box-shadow: 0 0 0 2px var(--accent);
+}
+
+.bio-input {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.bio-input:focus {
+  border-color: var(--accent);
 }
 
 /* Volume meter */

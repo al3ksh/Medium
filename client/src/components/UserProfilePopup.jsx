@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { useUserColor } from '../contexts/AuthContext'
+import { useUserColor, useUserBio } from '../contexts/AuthContext'
 
 export default function UserProfilePopup({ user, x, y, onClose }) {
   const popupRef = useRef(null)
   const getColor = useUserColor()
+  const getBio = useUserBio()
   const color = getColor(user)
+  const bio = getBio(user)
 
   useEffect(() => {
     function handleClick(e) {
@@ -50,11 +52,7 @@ export default function UserProfilePopup({ user, x, y, onClose }) {
           <span className="user-popup-tag">@{user.toLowerCase().replace(/\s/g, '-')}</span>
           <div className="user-popup-section">
             <span className="user-popup-label">ABOUT ME</span>
-            <p className="user-popup-about">No bio set.</p>
-          </div>
-          <div className="user-popup-section">
-            <span className="user-popup-label">MEMBER SINCE</span>
-            <p className="user-popup-date">Today</p>
+            <p className="user-popup-about">{bio || 'No bio set.'}</p>
           </div>
           <div className="user-popup-section">
             <span className="user-popup-label">ROLES</span>
