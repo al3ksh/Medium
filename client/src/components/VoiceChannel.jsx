@@ -22,7 +22,8 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
   return (
     <div className="voice-container">
       <div className="voice-header">
-        <span><Volume2 size={16} /> {channel.name}</span>
+        <Volume2 size={20} />
+        <span>{channel.name}</span>
       </div>
 
       <div className="voice-body">
@@ -33,8 +34,8 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
           >
             <div className={`voice-avatar speaking-${speaking[socketId] ? 'active' : 'idle'}`} style={{ background: selfColor }}>
               {nickname[0]?.toUpperCase()}
-              {isMuted && <MicOff size={10} className="voice-status-icon" />}
-              {isDeafened && !isMuted && <Headphones size={10} className="voice-status-icon deafened" />}
+              {isMuted && !isDeafened && <MicOff size={20} className="voice-status-icon" />}
+              {isDeafened && <Headphones size={20} className="voice-status-icon deafened" />}
             </div>
             <span>{nickname} (you)</span>
           </div>
@@ -72,7 +73,6 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
           <div className="voice-toolbar">
             <div className="voice-connected-info">
               <span className="voice-connected-label">Voice Connected</span>
-              {ping !== null && <SignalBars ping={ping} />}
             </div>
             <div className="voice-toolbar-actions">
               <button className={`voice-tool-btn ${isMuted ? 'active' : ''}`} onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
@@ -84,6 +84,9 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
               <button className="voice-tool-btn disconnect" onClick={leaveVoice} title="Disconnect">
                 <PhoneOff size={18} />
               </button>
+            </div>
+            <div className="voice-ping-info">
+              {ping !== null && <SignalBars ping={ping} />}
             </div>
           </div>
         )}

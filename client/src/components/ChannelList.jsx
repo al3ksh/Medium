@@ -107,9 +107,11 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                     onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, name) }}
                   >
                     <div className="voice-user-avatar" style={{ background: getColor(name) }}>{name[0]?.toUpperCase()}</div>
-                    <span>{name}{name === nickname ? ' (you)' : ''}</span>
-                    {name === nickname && isMuted && <MicOff size={12} className="voice-user-status muted" />}
-                    {name === nickname && isDeafened && <Headphones size={12} className="voice-user-status deafened" />}
+                    <span className="voice-user-name">{name}{name === nickname ? ' (you)' : ''}</span>
+                    <div className="voice-user-status-icons">
+                      {name === nickname && isMuted && !isDeafened && <MicOff size={14} className="voice-user-status muted" />}
+                      {name === nickname && isDeafened && <Headphones size={14} className="voice-user-status deafened" />}
+                    </div>
                   </div>
                 ))}
               </div>

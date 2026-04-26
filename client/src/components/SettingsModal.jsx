@@ -3,7 +3,53 @@ import { useAuth } from '../contexts/AuthContext'
 import { useVoice } from '../contexts/VoiceContext'
 import { useSocket } from '../contexts/SocketContext'
 import { nicknameToColor, loadSettings, saveSettings } from '../utils'
-import { X, LogOut } from 'lucide-react'
+import { X, LogOut, Check } from 'lucide-react'
+
+// Custom tooltip slider mimicking Discord
+function TooltipSlider({ value, min, max, onChange, suffix = '%', disabled = false, trackStyle = {} }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const percent = ((value - min) / (max - min)) * 100;
+  
+  return (
+    <div 
+      className="tooltip-slider-container"
+      onMouseEnter={() => !disabled && setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value))}
+        onMouseDown={() => !disabled && setShowTooltip(true)}
+        onMouseUp={() => setShowTooltip(false)}
+        onTouchStart={() => !disabled && setShowTooltip(true)}
+        onTouchEnd={() => setShowTooltip(false)}
+        className={`discord-slider ${disabled ? 'disabled' : ''}`}
+        disabled={disabled}
+        style={trackStyle}
+      />
+      {showTooltip && (
+        <div className="slider-tooltip" style={{ left: `calc(${percent}% + ${10 - percent * 0.2}px)` }}>
+          <div className="slider-tooltip-tail"></div>
+          {value}{suffix}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Discord-like switch
+function CheckboxSwitch({ checked, onChange }) {
+  return (
+    <div className={`discord-switch ${checked ? 'checked' : ''}`} onClick={() => onChange(!checked)}>
+      <div className="discord-switch-handle">
+        {checked && <Check size={12} className="discord-switch-icon" />}
+      </div>
+    </div>
+  );
+}
 
 const TABS = [
   { id: 'account', label: 'My Account' },
@@ -118,7 +164,8 @@ function AccountTab({ settings, onUpdate }) {
 function VoiceTab({ settings, onUpdate, voice }) {
   const [devices, setDevices] = useState([])
   const [testVolume, setTestVolume] = useState(0)
-  const testRef = useRef(null)
+  const [isTesting, setIsTesting] = useState(false)
+  const audioRefs = useRef(null)
 
   useEffect(() => {
     navigator.mediaDevices.enumerateDevices().then((list) => {
@@ -126,87 +173,190 @@ function VoiceTab({ settings, onUpdate, voice }) {
     })
   }, [])
 
-  async function testMic() {
-    try {
-      const constraints = settings.inputDevice
-        ? { deviceId: { exact: settings.inputDevice } }
-        : {}
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: constraints })
-      const ctx = new AudioContext()
-      const source = ctx.createMediaStreamSource(stream)
-      const analyser = ctx.createAnalyser()
-      source.connect(analyser)
-      analyser.fftSize = 256
-      const data = new Uint8Array(analyser.frequencyBinCount)
+  useEffect(() => {
+    let active = true;
 
-      function loop() {
-        analyser.getByteFrequencyData(data)
-        const avg = data.reduce((a, b) => a + b, 0) / data.length
-        setTestVolume(Math.min(avg / 128 * 100, 100))
-        if (testRef.current) requestAnimationFrame(loop)
+    async function initMic() {
+      try {
+        const constraints = settings.inputDevice
+          ? { deviceId: { exact: settings.inputDevice } }
+          : {}
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: constraints })
+        const ctx = new AudioContext()
+        const source = ctx.createMediaStreamSource(stream)
+        const analyser = ctx.createAnalyser()
+        source.connect(analyser)
+        // Analyser not connected to ctx.destination by default
+        analyser.fftSize = 256
+        
+        audioRefs.current = { ctx, stream, source, analyser }
+        const data = new Uint8Array(analyser.frequencyBinCount)
+
+        function loop() {
+          if (!active) return;
+          analyser.getByteFrequencyData(data)
+          const avg = data.reduce((a, b) => a + b, 0) / data.length
+          setTestVolume(Math.min(avg / 128 * 100, 100))
+          requestAnimationFrame(loop)
+        }
+        loop()
+      } catch (err) {
+        console.error("Mic access denied or error:", err)
       }
-      testRef.current = true
-      loop()
+    }
+    
+    initMic()
 
-      setTimeout(() => {
-        testRef.current = false
-        stream.getTracks().forEach((t) => t.stop())
-        ctx.close()
-        setTestVolume(0)
-      }, 5000)
-    } catch {}
+    return () => {
+      active = false;
+      const refs = audioRefs.current;
+      if (refs) {
+        if (refs.stream) refs.stream.getTracks().forEach((t) => t.stop())
+        if (refs.ctx) refs.ctx.close()
+      }
+      audioRefs.current = null;
+    }
+  }, [settings.inputDevice])
+
+  function testMic() {
+    const refs = audioRefs.current;
+    if (!refs) return;
+    
+    if (isTesting) {
+      refs.analyser.disconnect(refs.ctx.destination);
+      setIsTesting(false);
+    } else {
+      refs.analyser.connect(refs.ctx.destination);
+      setIsTesting(true);
+    }
   }
 
   return (
     <div className="settings-section">
       <h3>Voice & Audio</h3>
 
-      <div className="settings-group">
-        <label>Input Device</label>
-        <select
-          value={settings.inputDevice || ''}
-          onChange={(e) => onUpdate({ inputDevice: e.target.value })}
-        >
-          <option value="">Default</option>
-          {devices.map((d) => (
-            <option key={d.deviceId} value={d.deviceId}>
-              {d.label || `Microphone ${devices.indexOf(d) + 1}`}
-            </option>
-          ))}
-        </select>
-      </div>
+      <div className="settings-discord-grid">
+        <div className="settings-group">
+          <label>Input Device</label>
+          <select
+            value={settings.inputDevice || ''}
+            onChange={(e) => onUpdate({ inputDevice: e.target.value })}
+          >
+            <option value="">Default (All devices)</option>
+            {devices.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || `Microphone ${devices.indexOf(d) + 1}`}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <div className="settings-group">
-        <label>Input Volume</label>
-        <div className="range-row">
-          <input type="range" min="0" max="200" value={settings.inputVolume ?? 100} onChange={(e) => onUpdate({ inputVolume: parseInt(e.target.value) })} />
-          <span className="range-value">{settings.inputVolume ?? 100}%</span>
+        <div className="settings-group">
+          <label>Output Device</label>
+          <select disabled>
+            <option>Default (Speakers)</option>
+          </select>
+        </div>
+
+        <div className="settings-group">
+          <label>Input Volume</label>
+          <div className="range-row">
+            <TooltipSlider min={0} max={200} value={settings.inputVolume ?? 100} onChange={(val) => onUpdate({ inputVolume: val })} />
+          </div>
+        </div>
+
+        <div className="settings-group">
+          <label>Output Volume</label>
+          <div className="range-row">
+            <TooltipSlider min={0} max={200} value={settings.outputVolume ?? 100} onChange={(val) => onUpdate({ outputVolume: val })} />
+          </div>
         </div>
       </div>
 
       <div className="settings-group">
-        <label>Output Volume</label>
-        <div className="range-row">
-          <input type="range" min="0" max="200" value={settings.outputVolume ?? 100} onChange={(e) => onUpdate({ outputVolume: parseInt(e.target.value) })} />
-          <span className="range-value">{settings.outputVolume ?? 100}%</span>
+        <div className="discord-mic-test-row">
+          <button className="discord-test-btn" onClick={testMic}>
+            {isTesting ? 'Stop testing' : 'Let\'s Check'}
+          </button>
+          <div className="discord-meter">
+            {Array.from({ length: 40 }).map((_, i) => {
+              const active = isTesting && (testVolume / 100) * 40 > i;
+              const colorClass = i > 35 ? 'red' : i > 28 ? 'yellow' : '';
+              return (
+                <div key={i} className={`discord-meter-bar ${active ? 'active' : ''} ${active && colorClass ? colorClass : ''}`} />
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="settings-group">
-        <label>Input Sensitivity</label>
-        <div className="range-row">
-          <input type="range" min="1" max="100" value={settings.inputSensitivity ?? 10} onChange={(e) => onUpdate({ inputSensitivity: parseInt(e.target.value) })} />
-          <span className="range-value">{settings.inputSensitivity ?? 10}</span>
+      <div className="settings-group" style={{ marginTop: '2rem' }}>
+        <h3>Input Mode</h3>
+        <div className="voice-mode-options">
+          <label className="voice-mode-radio">
+            <input 
+              type="radio" 
+              name="voiceMode" 
+              value="studio" 
+              checked={settings.voiceMode === 'studio'} 
+              onChange={() => onUpdate({ voiceMode: 'studio' })} 
+            />
+            <div className="radio-circle"></div>
+            <div className="radio-text">
+              <div className="radio-title">Studio</div>
+              <div className="radio-desc">Clear audio: open microphone without processing</div>
+            </div>
+          </label>
+          <label className="voice-mode-radio">
+            <input 
+              type="radio" 
+              name="voiceMode" 
+              value="custom" 
+              checked={settings.voiceMode !== 'studio'} 
+              onChange={() => onUpdate({ voiceMode: 'custom' })} 
+            />
+            <div className="radio-circle"></div>
+            <div className="radio-text">
+              <div className="radio-title">Custom</div>
+              <div className="radio-desc">Advanced mode: give me all the buttons and dials!</div>
+            </div>
+          </label>
         </div>
-      </div>
 
-      <div className="settings-group">
-        <button className="test-mic-btn" onClick={testMic}>
-          Test Microphone (5s)
-        </button>
-        <div className="volume-meter">
-          <div className="volume-meter-fill" style={{ width: `${testVolume}%` }} />
-        </div>
+        {settings.voiceMode !== 'studio' && (
+          <div className="sensitivity-section">
+            <div className="sensitivity-toggle-row">
+              <div className="sensitivity-toggle-text">
+                <div className="sensitivity-toggle-title">Automatically determine input sensitivity</div>
+                <div className="sensitivity-toggle-desc">Determines how much sound the application transmits from your microphone.</div>
+              </div>
+              <CheckboxSwitch 
+                checked={settings.autoInputSensitivity ?? false}
+                onChange={(val) => onUpdate({ autoInputSensitivity: val })}
+              />
+            </div>
+            
+            <div className="threshold-slider-wrapper">
+              <div className="threshold-track-bg" />
+              <div 
+                className={`threshold-bg ${settings.autoInputSensitivity ? 'disabled' : ''}`}
+                style={{ 
+                  background: `linear-gradient(to right, #faa61a ${settings.inputSensitivity ?? 50}%, #43b581 ${settings.inputSensitivity ?? 50}%)`,
+                  clipPath: settings.autoInputSensitivity ? 'none' : `inset(0 ${100 - (testVolume * 1.5)}% 0 0)`, /* scaled slightly so it reaches end more predictably */
+                  transition: 'clip-path 0.1s linear'
+                }} 
+              />
+              <TooltipSlider 
+                min={0} 
+                max={100} 
+                value={settings.inputSensitivity ?? 50} 
+                onChange={(val) => onUpdate({ inputSensitivity: val })} 
+                suffix="%"
+                disabled={settings.autoInputSensitivity ?? false}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

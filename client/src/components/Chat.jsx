@@ -10,6 +10,7 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
   const getColor = useUserColor()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
+  const [imageViewer, setImageViewer] = useState(null)
   const bottomRef = useRef(null)
   const token = localStorage.getItem('token')
 
@@ -117,9 +118,9 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
                 </div>
                 {msg.content && <p className="message-text">{msg.content}</p>}
                 {msg.attachment && isImage(msg.attachment_type) && (
-                  <a href={msg.attachment} target="_blank" rel="noreferrer">
+                  <div className="message-image-container" onClick={() => setImageViewer(msg.attachment)}>
                     <img src={msg.attachment} alt="" className="message-image" loading="lazy" />
-                  </a>
+                  </div>
                 )}
                 {msg.attachment && !isImage(msg.attachment_type) && (
                   <a href={msg.attachment} target="_blank" rel="noreferrer" className="message-file">
@@ -134,6 +135,18 @@ export default function Chat({ channel, onUserClick, onUserContextMenu }) {
       </div>
 
       <MessageInput onSend={handleSend} />
+
+      {imageViewer && (
+        <div className="image-viewer-overlay" onClick={() => setImageViewer(null)}>
+          <button className="image-viewer-close" onClick={() => setImageViewer(null)}>
+            <X size={24} />
+          </button>
+          <img src={imageViewer} className="image-viewer-img" alt="" onClick={(e) => e.stopPropagation()} />
+          <a href={imageViewer} target="_blank" rel="noreferrer" className="image-viewer-open" onClick={(e) => e.stopPropagation()}>
+            Open original
+          </a>
+        </div>
+      )}
     </div>
   )
 }
