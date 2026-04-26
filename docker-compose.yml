@@ -8,7 +8,7 @@ services:
     env_file:
       - ./server/.env
     volumes:
-      - medium-db:/app/medium.db
+      - medium-data:/app/data
       - medium-uploads:/app/uploads
 
   client:
@@ -21,5 +21,5 @@ services:
       - server
 
 volumes:
-  medium-db:
+  medium-data:
   medium-uploads:
