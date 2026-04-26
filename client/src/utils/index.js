@@ -23,3 +23,98 @@ export function loadSettings() {
 export function saveSettings(settings) {
   localStorage.setItem('medium-settings', JSON.stringify(settings))
 }
+
+export const THEMES = {
+  dark: {
+    label: 'Dark',
+    vars: {
+      '--bg-primary': '#313338',
+      '--bg-secondary': '#2b2d31',
+      '--bg-tertiary': '#1e1f22',
+      '--bg-input': '#383a40',
+      '--bg-hover': '#35373c',
+      '--bg-active': '#404249',
+      '--text-primary': '#f2f3f5',
+      '--text-secondary': '#b5bac1',
+      '--text-muted': '#949ba4',
+      '--accent': '#5865f2',
+      '--accent-hover': '#4752c4',
+      '--red': '#ed4245',
+      '--green': '#23a559',
+      '--yellow': '#f0b232',
+      '--border': '#3f4147',
+    }
+  },
+  amoled: {
+    label: 'AMOLED Black',
+    vars: {
+      '--bg-primary': '#0a0a0a',
+      '--bg-secondary': '#000000',
+      '--bg-tertiary': '#000000',
+      '--bg-input': '#1a1a1a',
+      '--bg-hover': '#1a1a1a',
+      '--bg-active': '#2a2a2a',
+      '--text-primary': '#e0e0e0',
+      '--text-secondary': '#a0a0a0',
+      '--text-muted': '#707070',
+      '--accent': '#5865f2',
+      '--accent-hover': '#4752c4',
+      '--red': '#ed4245',
+      '--green': '#23a559',
+      '--yellow': '#f0b232',
+      '--border': '#1e1e1e',
+    }
+  },
+  light: {
+    label: 'Light',
+    vars: {
+      '--bg-primary': '#ffffff',
+      '--bg-secondary': '#f2f3f5',
+      '--bg-tertiary': '#e3e5e8',
+      '--bg-input': '#ebedef',
+      '--bg-hover': '#e8e9eb',
+      '--bg-active': '#d4d6d9',
+      '--text-primary': '#0e0e10',
+      '--text-secondary': '#4e5058',
+      '--text-muted': '#6d6f78',
+      '--accent': '#5865f2',
+      '--accent-hover': '#4752c4',
+      '--red': '#d83c3e',
+      '--green': '#1a7d3f',
+      '--yellow': '#c49a2a',
+      '--border': '#d4d6d9',
+    }
+  },
+}
+
+export const THEME_VARS = [
+  { key: '--bg-primary', label: 'Background' },
+  { key: '--bg-secondary', label: 'Secondary Background' },
+  { key: '--bg-tertiary', label: 'Tertiary Background' },
+  { key: '--bg-input', label: 'Input Background' },
+  { key: '--bg-hover', label: 'Hover Background' },
+  { key: '--text-primary', label: 'Primary Text' },
+  { key: '--text-secondary', label: 'Secondary Text' },
+  { key: '--text-muted', label: 'Muted Text' },
+  { key: '--accent', label: 'Accent' },
+  { key: '--accent-hover', label: 'Accent Hover' },
+  { key: '--border', label: 'Border' },
+  { key: '--red', label: 'Red' },
+  { key: '--green', label: 'Green' },
+]
+
+export function applyTheme(themeName, customVars) {
+  const root = document.documentElement
+  const preset = THEMES[themeName]
+
+  if (themeName === 'custom' && customVars) {
+    for (const [k, v] of Object.entries(customVars)) {
+      root.style.setProperty(k, v)
+    }
+    return
+  }
+
+  for (const [k, v] of Object.entries(preset?.vars || THEMES.dark.vars)) {
+    root.style.setProperty(k, v)
+  }
+}

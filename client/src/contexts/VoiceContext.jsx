@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { useSocket } from './SocketContext'
 import { useAuth } from './AuthContext'
+import { loadSettings } from '../utils'
 
 const VoiceContext = createContext(null)
 
@@ -18,10 +19,24 @@ export function VoiceProvider({ children }) {
   const [isDeafened, setIsDeafened] = useState(false)
   const [ping, setPing] = useState(null)
   const peerConnections = useRef({})
+  const rawStream = useRef(null)
   const localStream = useRef(null)
   const audioContext = useRef(null)
   const remoteAudioRefs = useRef({})
   const pingInterval = useRef(null)
+  const autoRejoined = useRef(false)
+
+  useEffect(() => {
+    if (!socket || autoRejoined.current) return
+    autoRejoined.current = true
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('voice-channel'))
+      if (saved?.id && saved?.name) {
+        joinVoice(saved)
+      }
+    } catch {}
+  }, [socket])
 
   function createPeerConnection(peerSocketId, isInitiator) {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
@@ -145,24 +160,58 @@ export function VoiceProvider({ children }) {
 
   async function joinVoice(channel) {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      localStream.current = stream
+      const settings = loadSettings()
+      const constraints = settings.inputDevice
+        ? { audio: { deviceId: { exact: settings.inputDevice } } }
+        : { audio: true }
+      const rawStream = await navigator.mediaDevices.getUserMedia(constraints)
+
+      audioContext.current = new AudioContext()
+      const source = audioContext.current.createMediaStreamSource(rawStream)
+      const inputGain = audioContext.current.createGain()
+      inputGain.gain.value = (settings.inputVolume ?? 100) / 100
+
+      const analyser = audioContext.current.createAnalyser()
+      analyser.fftSize = 256
+
+      const dest = audioContext.current.createMediaStreamDestination()
+
+      source.connect(inputGain)
+      inputGain.connect(dest)
+      inputGain.connect(analyser)
+
+      localStream.current = dest.stream
+      rawStream.current = rawStream
+
       setVoiceChannel(channel)
       setJoined(true)
       socket.emit('voice:join', channel.id)
+      localStorage.setItem('voice-channel', JSON.stringify({ id: channel.id, name: channel.name }))
 
-      audioContext.current = new AudioContext()
-      const analyser = audioContext.current.createAnalyser()
-      const source = audioContext.current.createMediaStreamSource(stream)
-      source.connect(analyser)
-      analyser.fftSize = 256
+      const outputVol = (settings.outputVolume ?? 100) / 100
+      Object.values(remoteAudioRefs.current).forEach((audio) => {
+        if (audio) audio.volume = Math.min(outputVol, 2)
+      })
+
+      const studioMode = settings.voiceMode === 'studio'
+      const autoSensitivity = settings.autoInputSensitivity ?? false
+      const manualThreshold = settings.inputSensitivity ?? 50
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount)
 
       function detectSpeaking() {
         analyser.getByteFrequencyData(dataArray)
         const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length
-        socket.emit('voice:speaking', avg > 10)
+
+        let isSpeaking
+        if (studioMode) {
+          isSpeaking = true
+        } else if (autoSensitivity) {
+          isSpeaking = avg > 5
+        } else {
+          isSpeaking = avg > manualThreshold
+        }
+        socket.emit('voice:speaking', isSpeaking)
         requestAnimationFrame(detectSpeaking)
       }
       detectSpeaking()
@@ -177,6 +226,10 @@ export function VoiceProvider({ children }) {
   }
 
   function leaveVoice() {
+    if (rawStream.current) {
+      rawStream.current.getTracks().forEach((t) => t.stop())
+      rawStream.current = null
+    }
     if (localStream.current) {
       localStream.current.getTracks().forEach((t) => t.stop())
       localStream.current = null
@@ -198,6 +251,7 @@ export function VoiceProvider({ children }) {
     setIsMuted(false)
     setIsDeafened(false)
     setPing(null)
+    localStorage.removeItem('voice-channel')
     socket.emit('voice:leave')
   }
 
@@ -249,9 +303,9 @@ export function VoiceProvider({ children }) {
   }
 
   function toggleMute() {
-    if (!localStream.current) return
+    if (!rawStream.current) return
     const next = !isMuted
-    localStream.current.getAudioTracks().forEach((t) => { t.enabled = !next })
+    rawStream.current.getAudioTracks().forEach((t) => { t.enabled = !next })
     setIsMuted(next)
   }
 
@@ -262,13 +316,13 @@ export function VoiceProvider({ children }) {
       if (audio) audio.muted = next
     })
     if (next && !isMuted) {
-      if (localStream.current) {
-        localStream.current.getAudioTracks().forEach((t) => { t.enabled = false })
+      if (rawStream.current) {
+        rawStream.current.getAudioTracks().forEach((t) => { t.enabled = false })
       }
       setIsMuted(true)
     } else if (!next && isMuted) {
-      if (localStream.current) {
-        localStream.current.getAudioTracks().forEach((t) => { t.enabled = true })
+      if (rawStream.current) {
+        rawStream.current.getAudioTracks().forEach((t) => { t.enabled = true })
       }
       setIsMuted(false)
     }
@@ -300,7 +354,13 @@ export function VoiceProvider({ children }) {
       {joined && peers.map((p) => (
         <audio
           key={`remote-audio-${p.socketId}`}
-          ref={(el) => { remoteAudioRefs.current[p.socketId] = el }}
+          ref={(el) => {
+            if (el) {
+              const settings = loadSettings()
+              el.volume = Math.min((settings.outputVolume ?? 100) / 100, 2)
+            }
+            remoteAudioRefs.current[p.socketId] = el
+          }}
           autoPlay
           playsInline
           style={{ display: 'none' }}

@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useVoice } from '../contexts/VoiceContext'
 import { useSocket } from '../contexts/SocketContext'
-import { nicknameToColor, loadSettings, saveSettings } from '../utils'
-import { X, LogOut, Check } from 'lucide-react'
+import { nicknameToColor, loadSettings, saveSettings, THEMES, THEME_VARS, applyTheme } from '../utils'
+import { X, LogOut, Check, Palette } from 'lucide-react'
 
 // Custom tooltip slider mimicking Discord
 function TooltipSlider({ value, min, max, onChange, suffix = '%', disabled = false, trackStyle = {} }) {
@@ -48,11 +48,86 @@ function CheckboxSwitch({ checked, onChange }) {
         {checked && <Check size={12} className="discord-switch-icon" />}
       </div>
     </div>
-  );
+  )
+}
+
+function AppearanceTab({ settings, onUpdate }) {
+  const currentTheme = settings.theme || 'dark'
+  const customTheme = settings.customTheme || { ...THEMES.dark.vars }
+
+  function selectTheme(name) {
+    const patch = { theme: name }
+    if (name === 'custom' && !settings.customTheme) {
+      patch.customTheme = { ...THEMES.dark.vars }
+    }
+    onUpdate(patch)
+    applyTheme(name, patch.customTheme || settings.customTheme)
+  }
+
+  function updateCustomVar(key, value) {
+    const next = { ...settings.customTheme, [key]: value }
+    onUpdate({ theme: 'custom', customTheme: next })
+    applyTheme('custom', next)
+  }
+
+  return (
+    <div className="settings-section">
+      <h3>Theme</h3>
+      <div className="theme-grid">
+        {Object.entries(THEMES).map(([id, theme]) => (
+          <button
+            key={id}
+            className={`theme-card ${currentTheme === id ? 'active' : ''}`}
+            onClick={() => selectTheme(id)}
+          >
+            <div className="theme-preview" style={{
+              background: theme.vars['--bg-primary'],
+              borderColor: theme.vars['--border'],
+            }}>
+              <div className="theme-preview-sidebar" style={{ background: theme.vars['--bg-tertiary'] }} />
+              <div className="theme-preview-content" style={{ background: theme.vars['--bg-primary'] }}>
+                <div style={{ background: theme.vars['--accent'], width: '60%', height: '4px', borderRadius: '2px' }} />
+                <div style={{ background: theme.vars['--text-muted'], width: '80%', height: '3px', borderRadius: '2px' }} />
+              </div>
+            </div>
+            <span>{theme.label}</span>
+          </button>
+        ))}
+        <button
+          className={`theme-card ${currentTheme === 'custom' ? 'active' : ''}`}
+          onClick={() => selectTheme('custom')}
+        >
+          <div className="theme-preview" style={{ borderColor: 'var(--border)' }}>
+            <Palette size={24} style={{ margin: 'auto', color: 'var(--accent)' }} />
+          </div>
+          <span>Custom</span>
+        </button>
+      </div>
+
+      {currentTheme === 'custom' && (
+        <div className="theme-editor">
+          <h4>Custom Theme Editor</h4>
+          <div className="theme-editor-grid">
+            {THEME_VARS.map(({ key, label }) => (
+              <div key={key} className="theme-color-row">
+                <input
+                  type="color"
+                  value={customTheme[key] || '#000000'}
+                  onChange={(e) => updateCustomVar(key, e.target.value)}
+                />
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const TABS = [
   { id: 'account', label: 'My Account' },
+  { id: 'appearance', label: 'Appearance' },
   { id: 'voice', label: 'Voice & Audio' },
   { id: 'notifications', label: 'Notifications' },
 ]
@@ -92,6 +167,7 @@ export default function SettingsModal({ onClose }) {
           <button className="settings-close" onClick={onClose}><X size={20} /></button>
 
           {tab === 'account' && <AccountTab settings={settings} onUpdate={update} />}
+          {tab === 'appearance' && <AppearanceTab settings={settings} onUpdate={update} />}
           {tab === 'voice' && <VoiceTab settings={settings} onUpdate={update} voice={voice} />}
           {tab === 'notifications' && <NotificationsTab settings={settings} onUpdate={update} />}
         </div>
@@ -341,7 +417,7 @@ function VoiceTab({ settings, onUpdate, voice }) {
               <div 
                 className={`threshold-bg ${settings.autoInputSensitivity ? 'disabled' : ''}`}
                 style={{ 
-                  background: `linear-gradient(to right, #faa61a ${settings.inputSensitivity ?? 50}%, #43b581 ${settings.inputSensitivity ?? 50}%)`,
+                  background: `linear-gradient(to right, var(--yellow) ${settings.inputSensitivity ?? 50}%, var(--green) ${settings.inputSensitivity ?? 50}%)`,
                   clipPath: settings.autoInputSensitivity ? 'none' : `inset(0 ${100 - (testVolume * 1.5)}% 0 0)`, /* scaled slightly so it reaches end more predictably */
                   transition: 'clip-path 0.1s linear'
                 }} 
