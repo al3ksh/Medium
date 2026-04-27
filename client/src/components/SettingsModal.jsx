@@ -3,7 +3,7 @@ import { useAuth, useUserBio, useUserAvatar, useUserBanner } from '../contexts/A
 import { useVoice } from '../contexts/VoiceContext'
 import { useSocket } from '../contexts/SocketContext'
 import { nicknameToColor, loadSettings, saveSettings, THEMES, THEME_VARS, applyTheme } from '../utils'
-import { X, LogOut, Check, Palette, Camera, Trash2 } from 'lucide-react'
+import { X, LogOut, Check, Palette, Camera, Trash2, User, Paintbrush, Volume2, Bell } from 'lucide-react'
 import CropModal from './CropModal'
 import ConfirmModal from './ConfirmModal'
 
@@ -130,10 +130,10 @@ function AppearanceTab({ settings, onUpdate }) {
 }
 
 const TABS = [
-  { id: 'account', label: 'My Account' },
-  { id: 'appearance', label: 'Appearance' },
-  { id: 'voice', label: 'Voice & Audio' },
-  { id: 'notifications', label: 'Notifications' },
+  { id: 'account', label: 'My Account', icon: User },
+  { id: 'appearance', label: 'Appearance', icon: Paintbrush },
+  { id: 'voice', label: 'Voice & Audio', icon: Volume2 },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
 ]
 
 export default function SettingsModal({ onClose }) {
@@ -153,19 +153,30 @@ export default function SettingsModal({ onClose }) {
     <div className="settings-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="settings-modal">
         <div className="settings-sidebar">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              className={`settings-tab ${tab === t.id ? 'active' : ''}`}
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
+          <div className="settings-sidebar-label">User Settings</div>
+          <div className="settings-nav">
+            {TABS.map((t) => {
+              const Icon = t.icon
+              return (
+                <button
+                  key={t.id}
+                  className={`settings-tab ${tab === t.id ? 'active' : ''}`}
+                  onClick={() => setTab(t.id)}
+                >
+                  <Icon size={16} />
+                  <span>{t.label}</span>
+                </button>
+              )
+            })}
+          </div>
           <div className="settings-sidebar-sep" />
           <button className="settings-tab logout" onClick={() => setLogoutConfirm(true)}>
             <LogOut size={16} /> Log Out
           </button>
+          <div className="settings-sidebar-footer">
+            <span className="settings-sidebar-app">Medium</span>
+            <span className="settings-sidebar-version">v1.0.0</span>
+          </div>
         </div>
 
         <div className="settings-content">

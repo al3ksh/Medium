@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useAvatarColor, useUserColor, useUserAvatar } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
-import { Volume2, Mic, MicOff, Headphones, PhoneOff } from 'lucide-react'
+import { Volume2, Mic, MicOff, Headphones, PhoneOff, Radio } from 'lucide-react'
 import ConnectionDetailsModal from './ConnectionDetailsModal'
 
 function SignalBars({ ping }) {
@@ -70,16 +70,22 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
         )}
 
         {!isActive && (
-          <p className="voice-empty">Click below to join this voice channel.</p>
+          <div className="voice-idle-hero">
+            <div className="voice-idle-icon-ring">
+              <Radio size={40} className="voice-idle-icon" />
+            </div>
+            <h2 className="voice-idle-title">{channel.name}</h2>
+            <p className="voice-idle-subtitle">No one is in this voice channel yet — be the first to join!</p>
+            <button className="voice-join-hero-btn" onClick={() => joinVoice(channel)}>
+              <Volume2 size={18} />
+              <span>Join Voice</span>
+            </button>
+          </div>
         )}
       </div>
 
       <div className="voice-controls">
-        {!isActive ? (
-          <button className="voice-join-btn" onClick={() => joinVoice(channel)}>
-            Join Voice
-          </button>
-        ) : (
+        {!isActive ? null : (
           <div className="voice-toolbar">
             <div className="voice-connected-info">
               <span className="voice-connected-label">Voice Connected</span>
