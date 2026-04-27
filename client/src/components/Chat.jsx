@@ -9,6 +9,7 @@ import { playNotifSound } from '../utils/notif'
 import EmojiPicker from './EmojiPicker'
 import LinkPreview from './LinkPreview'
 import FadeImage from './FadeImage'
+import MessageContextMenu from './MessageContextMenu'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
 
@@ -37,6 +38,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [editText, setEditText] = useState('')
   const [revealedNsfw, setRevealedNsfw] = useState(new Set())
   const [newMsgId, setNewMsgId] = useState(null)
+  const [msgContextMenu, setMsgContextMenu] = useState(null)
 
   function toggleNsfw(msgId, e) {
     e.stopPropagation()
@@ -169,6 +171,18 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
     }
   }, [reactPicker, editingId])
 
+  useEffect(() => {
+    if (!msgContextMenu) return
+    function close() { setMsgContextMenu(null) }
+    function handleKey(e) { if (e.key === 'Escape') close() }
+    document.addEventListener('click', close)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('click', close)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [msgContextMenu])
+
   function handleSend(content, attachmentData, nsfw) {
     socket.emit('message:send', {
       channelId: channel.id,
@@ -269,7 +283,10 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
             const isOwn = msg.user_id === myUserId
             const isEditing = editingId === msg.id
             return (
-            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}${msg.id === newMsgId ? ' msg-new' : ''}`}>
+            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}${msg.id === newMsgId ? ' msg-new' : ''}`} onContextMenu={(e) => {
+              e.preventDefault()
+              setMsgContextMenu({ msg, isOwn, x: e.clientX, y: e.clientY })
+            }}>
               <div
                 className="message-avatar clickable"
                 style={getAvatar(msg.nickname) ? {} : { background: isImpersonated ? hashColor(msg.user_id) : getColor(msg.nickname) }}
@@ -453,6 +470,20 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
           tip="Hold Shift + Click to skip this confirmation"
           onConfirm={confirmDelete}
           onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+      {msgContextMenu && (
+        <MessageContextMenu
+          msg={msgContextMenu.msg}
+          isOwn={msgContextMenu.isOwn}
+          x={msgContextMenu.x}
+          y={msgContextMenu.y}
+          channelName={channel.name}
+          onReply={() => { setReplyTo(msgContextMenu.msg); setMsgContextMenu(null) }}
+          onReact={(e) => { openReactPicker(e, msgContextMenu.msg.id); setMsgContextMenu(null) }}
+          onEdit={() => { startEdit(msgContextMenu.msg); setMsgContextMenu(null) }}
+          onDelete={() => { handleDeleteMessage(msgContextMenu.msg.id, {}); setMsgContextMenu(null) }}
+          onClose={() => setMsgContextMenu(null)}
         />
       )}
     </div>
