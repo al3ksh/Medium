@@ -1,0 +1,36 @@
+services:
+  server:
+    build: ./server
+    container_name: medium-server
+    restart: unless-stopped
+    command: npm run dev
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+      - medium-data:/app/data
+      - medium-uploads:/app/uploads
+
+  client:
+    build: 
+      context: ./client
+      target: build
+    container_name: medium-client
+    restart: unless-stopped
+    command: npm run dev
+    ports:
+      - "8080:5173"
+    environment:
+      - VITE_API_URL=http://server:3001
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    depends_on:
+      - server
+
+volumes:
+  medium-data:
+  medium-uploads:

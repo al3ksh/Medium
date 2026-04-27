@@ -18,6 +18,8 @@ export function VoiceProvider({ children }) {
   const [isMuted, setIsMuted] = useState(false)
   const [isDeafened, setIsDeafened] = useState(false)
   const [ping, setPing] = useState(null)
+  const [pingHistory, setPingHistory] = useState([])
+  const [packetLoss, setPacketLoss] = useState(0)
   const peerConnections = useRef({})
   const rawStream = useRef(null)
   const localStream = useRef(null)
@@ -145,7 +147,13 @@ export function VoiceProvider({ children }) {
     socket.on('voice:speaking', onSpeaking)
     socket.on('voice:occupancy', setOccupancy)
     socket.on('voice:pong', (timestamp) => {
-      setPing(Math.round(Date.now() - timestamp))
+      const currentPing = Math.round(Date.now() - timestamp)
+      setPing(currentPing)
+      setPingHistory(prev => {
+        const next = [...prev, { time: Date.now(), ping: currentPing }]
+        if (next.length > 50) return next.slice(next.length - 50)
+        return next
+      })
     })
 
     return () => {
@@ -220,6 +228,21 @@ export function VoiceProvider({ children }) {
 
       pingInterval.current = setInterval(() => {
         socket.emit('voice:ping', Date.now())
+        
+        let packetsSent = 0
+        let packetsLost = 0
+        Promise.all(Object.values(peerConnections.current).map(pc => pc.getStats())).then(statsArray => {
+          statsArray.forEach(stats => {
+            stats.forEach(report => {
+              if (report.type === 'outbound-rtp') packetsSent += report.packetsSent || 0
+              if (report.type === 'remote-inbound-rtp' || report.type === 'inbound-rtp') packetsLost += report.packetsLost || 0
+            })
+          })
+          if (packetsSent > 0) {
+            const lossRatio = (packetsLost / (packetsSent + packetsLost)) * 100
+            setPacketLoss(Number(lossRatio.toFixed(1)))
+          }
+        }).catch(() => {})
       }, 5000)
       socket.emit('voice:ping', Date.now())
     } catch (err) {
@@ -257,6 +280,8 @@ export function VoiceProvider({ children }) {
     setIsMuted(false)
     setIsDeafened(false)
     setPing(null)
+    setPingHistory([])
+    setPacketLoss(0)
     localStorage.removeItem('voice-channel')
     socket.emit('voice:leave')
   }
@@ -355,6 +380,8 @@ export function VoiceProvider({ children }) {
       toggleMute,
       toggleDeafen,
       ping,
+      pingHistory,
+      packetLoss,
     }}>
       {children}
       {joined && peers.map((p) => (

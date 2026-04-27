@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useAvatarColor, useUserColor, useUserAvatar } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
 import { Volume2, Mic, MicOff, Headphones, PhoneOff } from 'lucide-react'
+import ConnectionDetailsModal from './ConnectionDetailsModal'
 
 function SignalBars({ ping }) {
   return (
@@ -19,6 +21,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
   const isActive = joined && voiceChannel?.id === channel.id
+  const [showDetails, setShowDetails] = useState(false)
 
   return (
     <div className="voice-container">
@@ -28,36 +31,42 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
       </div>
 
       <div className="voice-body">
-        {isActive && (
-          <div
-            className="voice-peer clickable"
-            onClick={(e) => onUserClick?.({ user: nickname, x: e.clientX + 10, y: e.clientY - 100 })}
-          >
-            <div className={`voice-avatar speaking-${speaking[socketId] ? 'active' : 'idle'}`} style={getAvatar(nickname) ? {} : { background: selfColor }}>
-              {getAvatar(nickname) ? <img src={getAvatar(nickname)} alt="" /> : nickname[0]?.toUpperCase()}
-              {isMuted && !isDeafened && <MicOff size={20} className="voice-status-icon" />}
-              {isDeafened && <Headphones size={20} className="voice-status-icon deafened" />}
-            </div>
-            <span>{nickname} (you)</span>
-          </div>
+        {isActive && peers.length === 0 && (
+          <p className="voice-empty-top">You're alone here. Invite someone!</p>
         )}
 
-        {isActive && peers.map((p) => (
-          <div
-            key={p.socketId}
-            className="voice-peer clickable"
-            onClick={(e) => onUserClick?.({ user: p.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
-            onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, p.nickname) }}
-          >
-            <div className={`voice-avatar speaking-${speaking[p.socketId] ? 'active' : 'idle'}`} style={getAvatar(p.nickname) ? {} : { background: getColor(p.nickname) }}>
-              {getAvatar(p.nickname) ? <img src={getAvatar(p.nickname)} alt="" /> : p.nickname[0]?.toUpperCase()}
+        {isActive && (
+          <div className={`voice-grid count-${peers.length + 1}`}>
+            <div
+              className={`voice-peer clickable speaking-${speaking[socketId] ? 'active' : 'idle'}`}
+              onClick={(e) => onUserClick?.({ user: nickname, x: e.clientX + 10, y: e.clientY - 100 })}
+            >
+              <div className="voice-avatar" style={getAvatar(nickname) ? {} : { background: selfColor }}>
+                {getAvatar(nickname) ? <img src={getAvatar(nickname)} alt="" /> : nickname[0]?.toUpperCase()}
+              </div>
+              <div className="voice-user-badge">
+                <span className="voice-name">{nickname} (you)</span>
+                {isMuted && !isDeafened && <MicOff size={16} className="voice-status-icon-inline" />}
+                {isDeafened && <Headphones size={16} className="voice-status-icon-inline deafened" />}
+              </div>
             </div>
-            <span>{p.nickname}</span>
-          </div>
-        ))}
 
-        {isActive && peers.length === 0 && (
-          <p className="voice-empty">You're alone here. Invite someone!</p>
+            {peers.map((p) => (
+              <div
+                key={p.socketId}
+                className={`voice-peer clickable speaking-${speaking[p.socketId] ? 'active' : 'idle'}`}
+                onClick={(e) => onUserClick?.({ user: p.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
+                onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, p.nickname) }}
+              >
+                <div className="voice-avatar" style={getAvatar(p.nickname) ? {} : { background: getColor(p.nickname) }}>
+                  {getAvatar(p.nickname) ? <img src={getAvatar(p.nickname)} alt="" /> : p.nickname[0]?.toUpperCase()}
+                </div>
+                <div className="voice-user-badge">
+                  <span className="voice-name">{p.nickname}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {!isActive && (
@@ -87,11 +96,17 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
               </button>
             </div>
             <div className="voice-ping-info">
-              {ping !== null && <SignalBars ping={ping} />}
+              {ping !== null && (
+                <button className="voice-tool-btn ping-btn" onClick={() => setShowDetails(true)} title="Connection Details">
+                  <SignalBars ping={ping} />
+                  <span className="ping-text">{ping} ms</span>
+                </button>
+              )}
             </div>
           </div>
         )}
       </div>
+      {showDetails && <ConnectionDetailsModal onClose={() => setShowDetails(false)} />}
     </div>
   )
 }

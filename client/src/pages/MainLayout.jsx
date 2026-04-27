@@ -15,6 +15,7 @@ import ChannelContextMenu from '../components/ChannelContextMenu'
 import ConfirmModal from '../components/ConfirmModal'
 import CreateChannelModal from '../components/CreateChannelModal'
 import SearchModal from '../components/SearchModal'
+import ConnectionDetailsModal from '../components/ConnectionDetailsModal'
 
 export default function MainLayout() {
   const { nickname, logout } = useAuth()
@@ -51,6 +52,7 @@ export default function MainLayout() {
   const [unlockPassword, setUnlockPassword] = useState('')
   const [unlockError, setUnlockError] = useState('')
   const [unread, setUnread] = useState({})
+  const [showConnectionDetails, setShowConnectionDetails] = useState(false)
 
   function clearUnread(channelId) {
     setUnread(prev => {
@@ -283,11 +285,13 @@ export default function MainLayout() {
                   <PhoneOff size={16} />
                 </button>
                 {ping !== null && (
-                  <div className="signal-bars" title={`${ping}ms`} data-quality={ping <= 70 ? '4' : ping <= 150 ? '3' : ping <= 300 ? '2' : '1'}>
-                    {[1, 2, 3, 4].map((level) => (
-                      <div key={level} className={`signal-bar ${ping <= (level === 1 ? 300 : level === 2 ? 150 : level === 3 ? 70 : 0) ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
-                    ))}
-                  </div>
+                  <button className="footer-btn" onClick={() => setShowConnectionDetails(true)} title="Connection Details" style={{ width: 'auto', padding: '0 6px', gap: '4px' }}>
+                    <div className="signal-bars" data-quality={ping <= 70 ? '4' : ping <= 150 ? '3' : ping <= 300 ? '2' : '1'}>
+                      {[1, 2, 3, 4].map((level) => (
+                        <div key={level} className={`signal-bar ${ping <= (level === 1 ? 300 : level === 2 ? 150 : level === 3 ? 70 : 0) ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
+                      ))}
+                    </div>
+                  </button>
                 )}
               </>
             )}
@@ -430,6 +434,7 @@ export default function MainLayout() {
           }}
         />
       )}
+      {showConnectionDetails && <ConnectionDetailsModal onClose={() => setShowConnectionDetails(false)} />}
     </div>
   )
 }
