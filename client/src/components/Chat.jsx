@@ -84,12 +84,15 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         const isMentioned = msg.content.toLowerCase().includes(`@${nickname.toLowerCase()}`)
         const notifSetting = getNotifSetting(channel.id)
         const muted = isChannelMuted(channel.id)
-        if (!muted && notifSetting !== 'none' && (isEveryone || isMentioned)) {
-          if (notifSetting === 'mentions' || isEveryone || isMentioned) {
-            playNotifSound()
-            const label = isEveryone ? (msg.content.includes('@everyone') ? '@everyone' : '@here') : `@${nickname}`
-            showToast(`${msg.nickname} mentioned you (${label}) in #${channel.name}`)
-          }
+
+        if (muted || notifSetting === 'none') return
+        if (notifSetting === 'mentions' && !isMentioned) return
+        if (notifSetting === 'default' && !isEveryone && !isMentioned) return
+
+        if (isEveryone || isMentioned) {
+          playNotifSound()
+          const label = isEveryone ? (msg.content.includes('@everyone') ? '@everyone' : '@here') : `@${nickname}`
+          showToast(`${msg.nickname} mentioned you (${label}) in #${channel.name}`)
         }
       }
     }

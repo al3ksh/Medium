@@ -3258,6 +3258,12 @@ body {
   font-size: 0.75rem;
 }
 
+.ctx-check {
+  margin-right: 4px;
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
 .context-submenu-trigger {
   position: relative;
   justify-content: flex-start;

@@ -10,15 +10,28 @@ function getMutes() {
 
 function setMuted(channelId, until) {
   const mutes = getMutes()
-  if (until) mutes[channelId] = until
-  else delete mutes[channelId]
+  if (until === undefined || until === null) delete mutes[channelId]
+  else mutes[channelId] = until
   localStorage.setItem(MUTE_KEY, JSON.stringify(mutes))
   window.dispatchEvent(new Event('channel-mutes-changed'))
 }
 
+function getMuteLabel(channelId) {
+  const mutes = getMutes()
+  const val = mutes[channelId]
+  if (!val && val !== 0) return null
+  if (val === -1) return 'forever'
+  const remaining = val - Date.now()
+  if (remaining <= 0) return null
+  if (remaining <= 16 * 60 * 1000) return '15min'
+  if (remaining <= 31 * 60 * 1000) return '30min'
+  return '1h'
+}
+
 export function isChannelMuted(channelId) {
   const mutes = getMutes()
-  if (!mutes[channelId]) return false
+  if (!mutes[channelId] && mutes[channelId] !== 0) return false
+  if (mutes[channelId] === -1) return true
   if (Date.now() > mutes[channelId]) {
     delete mutes[channelId]
     localStorage.setItem(MUTE_KEY, JSON.stringify(mutes))
@@ -127,13 +140,17 @@ export default function ChannelContextMenu({ channel, x, y, onOpen, onJoinVoice,
               <span className="context-arrow">▸</span>
               <div className="context-submenu">
                 <button className="context-item" onClick={() => { setMuted(channel.id, Date.now() + 15 * 60 * 1000); onClose() }}>
-                  15 minutes
+                  {getMuteLabel(channel.id) === '15min' && <span className="ctx-check">✓</span>} 15 minutes
                 </button>
                 <button className="context-item" onClick={() => { setMuted(channel.id, Date.now() + 30 * 60 * 1000); onClose() }}>
-                  30 minutes
+                  {getMuteLabel(channel.id) === '30min' && <span className="ctx-check">✓</span>} 30 minutes
                 </button>
                 <button className="context-item" onClick={() => { setMuted(channel.id, Date.now() + 60 * 60 * 1000); onClose() }}>
-                  1 hour
+                  {getMuteLabel(channel.id) === '1h' && <span className="ctx-check">✓</span>} 1 hour
+                </button>
+                <div className="context-sep" />
+                <button className="context-item" onClick={() => { setMuted(channel.id, -1); onClose() }}>
+                  {getMuteLabel(channel.id) === 'forever' && <span className="ctx-check">✓</span>} Until I turn it back on
                 </button>
                 {isChannelMuted(channel.id) && (
                   <>
@@ -149,14 +166,14 @@ export default function ChannelContextMenu({ channel, x, y, onOpen, onJoinVoice,
               <Bell size={14} /> Notification Settings
               <span className="context-arrow">▸</span>
               <div className="context-submenu">
-                <button className={`context-item${getNotifSetting(channel.id) === 'default' ? ' active' : ''}`} onClick={() => { setNotifSetting(channel.id, 'default'); onClose() }}>
-                  <Bell size={14} /> All Messages
+                <button className="context-item" onClick={() => { setNotifSetting(channel.id, 'default'); onClose() }}>
+                  {getNotifSetting(channel.id) === 'default' && <span className="ctx-check">✓</span>} All Messages
                 </button>
-                <button className={`context-item${getNotifSetting(channel.id) === 'mentions' ? ' active' : ''}`} onClick={() => { setNotifSetting(channel.id, 'mentions'); onClose() }}>
-                  <BellRing size={14} /> Mentions Only
+                <button className="context-item" onClick={() => { setNotifSetting(channel.id, 'mentions'); onClose() }}>
+                  {getNotifSetting(channel.id) === 'mentions' && <span className="ctx-check">✓</span>} @Mentions Only
                 </button>
-                <button className={`context-item${getNotifSetting(channel.id) === 'none' ? ' active' : ''}`} onClick={() => { setNotifSetting(channel.id, 'none'); onClose() }}>
-                  <BellOff size={14} /> None
+                <button className="context-item" onClick={() => { setNotifSetting(channel.id, 'none'); onClose() }}>
+                  {getNotifSetting(channel.id) === 'none' && <span className="ctx-check">✓</span>} None
                 </button>
               </div>
             </div>
