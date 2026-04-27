@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Hash, Volume2, Plus, X, MicOff, Headphones, Lock } from 'lucide-react'
+import { Hash, Volume2, Plus, X, MicOff, Headphones, Lock, BellOff } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
+import { isChannelMuted } from './ChannelContextMenu'
 import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 
 export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate, unlockedChannels, onUnlockNeeded, unread }) {
@@ -82,6 +83,9 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                 {isLocked ? <Lock size={16} /> : <ChannelIcon size={16} />}
               </span>
               <span className="channel-name">{ch.name}</span>
+              {type === 'text' && isChannelMuted(ch.id) && (
+                <BellOff size={12} className="channel-muted-icon" />
+              )}
               {type === 'text' && unread?.[ch.id] > 0 && activeId !== ch.id && (
                 <span className="channel-unread-badge">{unread[ch.id]}</span>
               )}

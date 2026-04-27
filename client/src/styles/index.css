@@ -544,6 +544,12 @@ body {
   white-space: nowrap;
 }
 
+.channel-muted-icon {
+  color: var(--text-muted);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
 .channel-unread-badge {
   background: var(--red);
   color: #fff;
@@ -1378,6 +1384,23 @@ body {
 
 .typing-text strong {
   color: var(--text-secondary);
+}
+
+.scroll-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.scroll-bottom-bar:hover {
+  color: var(--accent);
 }
 
 .message-input-form {
@@ -3227,6 +3250,40 @@ body {
 
 .context-item.danger:hover {
   background: var(--red);
+}
+
+.context-item.active::before {
+  content: '✓';
+  margin-right: 4px;
+  font-size: 0.75rem;
+}
+
+.context-submenu-trigger {
+  position: relative;
+  justify-content: flex-start;
+}
+
+.context-arrow {
+  margin-left: auto;
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+
+.context-submenu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  min-width: 180px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 6px 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.context-submenu-trigger:hover > .context-submenu {
+  display: block;
 }
 
 .context-item.disabled {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, Paperclip, Reply, Pencil, SmilePlus } from 'lucide-react'
+import { Menu, X, Paperclip, Reply, Pencil, SmilePlus, ChevronDown } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar, useAuth } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
@@ -10,6 +10,7 @@ import EmojiPicker from './EmojiPicker'
 import LinkPreview from './LinkPreview'
 import FadeImage from './FadeImage'
 import MessageContextMenu from './MessageContextMenu'
+import { isChannelMuted, getNotifSetting } from './ChannelContextMenu'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
 
@@ -39,6 +40,10 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [revealedNsfw, setRevealedNsfw] = useState(new Set())
   const [newMsgId, setNewMsgId] = useState(null)
   const [msgContextMenu, setMsgContextMenu] = useState(null)
+  const [showScrollBtn, setShowScrollBtn] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const chatRef = useRef(null)
+  const isAtBottom = useRef(true)
 
   function toggleNsfw(msgId, e) {
     e.stopPropagation()
@@ -77,10 +82,14 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       if (msg.nickname !== nickname && msg.content) {
         const isEveryone = msg.content.includes('@everyone') || msg.content.includes('@here')
         const isMentioned = msg.content.toLowerCase().includes(`@${nickname.toLowerCase()}`)
-        if (isEveryone || isMentioned) {
-          playNotifSound()
-          const label = isEveryone ? (msg.content.includes('@everyone') ? '@everyone' : '@here') : `@${nickname}`
-          showToast(`${msg.nickname} mentioned you (${label}) in #${channel.name}`)
+        const notifSetting = getNotifSetting(channel.id)
+        const muted = isChannelMuted(channel.id)
+        if (!muted && notifSetting !== 'none' && (isEveryone || isMentioned)) {
+          if (notifSetting === 'mentions' || isEveryone || isMentioned) {
+            playNotifSound()
+            const label = isEveryone ? (msg.content.includes('@everyone') ? '@everyone' : '@here') : `@${nickname}`
+            showToast(`${msg.nickname} mentioned you (${label}) in #${channel.name}`)
+          }
         }
       }
     }
@@ -116,11 +125,29 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   }, [channel.id])
 
   useEffect(() => {
+    const el = chatRef.current
+    if (!el) return
+    function handleScroll() {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100
+      isAtBottom.current = atBottom
+      setShowScrollBtn(!atBottom)
+      if (atBottom) setUnreadCount(0)
+    }
+    el.addEventListener('scroll', handleScroll)
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
     if (messages.length > prevMsgCount.current) {
       const instant = prevMsgCount.current === 0
-      bottomRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' })
-      if (instant) {
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' }), 100)
+      if (isAtBottom.current || instant) {
+        bottomRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' })
+        if (instant) {
+          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' }), 100)
+        }
+      } else {
+        setShowScrollBtn(true)
+        setUnreadCount((c) => c + 1)
       }
     }
     prevMsgCount.current = messages.length
@@ -272,7 +299,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         <span className="chat-channel-name"># {channel.name}</span>
       </div>
 
-      <div className="chat-messages">
+      <div className="chat-messages" ref={chatRef}>
         {loading ? (
           <div className="chat-loading">Loading messages...</div>
         ) : messages.length === 0 ? (
@@ -435,6 +462,17 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
           <span className="typing-text">
             {typingUsers.length === 1 ? 'is' : 'are'} typing...
           </span>
+        </div>
+      )}
+
+      {showScrollBtn && (
+        <div className="scroll-bottom-bar" onClick={() => {
+          bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+          setShowScrollBtn(false)
+          setUnreadCount(0)
+        }}>
+          <ChevronDown size={14} />
+          <span>Newer{unreadCount > 0 ? ` (${unreadCount})` : ''}</span>
         </div>
       )}
 

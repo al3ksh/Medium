@@ -18,8 +18,15 @@ export default function UserProfilePopup({ user, x, y, onClose }) {
         onClose()
       }
     }
+    function handleKey(e) {
+      if (e.key === 'Escape') onClose()
+    }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [onClose])
 
   useEffect(() => {
