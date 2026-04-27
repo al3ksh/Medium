@@ -5,6 +5,45 @@ const { authMiddleware } = require('../middleware/auth')
 
 router.use(authMiddleware)
 
+router.get('/search/query', (req, res) => {
+  const { q, channel, nickname: nick, private_password: privatePass } = req.query
+  if (!q || q.trim().length < 2) return res.json([])
+
+  const since = Math.floor(Date.now() / 1000) - 86400
+  const includeLocked = privatePass && privatePass === process.env.PRIVATE_PASSWORD
+  const conditions = ['m.created_at >= ?', "m.content LIKE '%' || ? || '%'"]
+  const params = [since, q.trim()]
+
+  if (!includeLocked) {
+    conditions.push('c.locked = 0')
+  }
+
+  if (channel) {
+    if (!includeLocked) {
+      const ch = db.prepare('SELECT locked FROM channels WHERE id = ?').get(channel)
+      if (ch?.locked) return res.json([])
+    }
+    conditions.push('m.channel_id = ?')
+    params.push(channel)
+  }
+  if (nick) {
+    conditions.push('m.nickname = ?')
+    params.push(nick)
+  }
+
+  const where = conditions.join(' AND ')
+  const messages = db.prepare(`SELECT m.*, c.name as channel_name FROM messages m JOIN channels c ON m.channel_id = c.id WHERE ${where} ORDER BY m.created_at DESC LIMIT 50`).all(...params)
+
+  res.json(messages.map(m => ({
+    id: m.id,
+    channel_id: m.channel_id,
+    channel_name: m.channel_name,
+    nickname: m.nickname,
+    content: m.content,
+    created_at: m.created_at,
+  })))
+})
+
 router.get('/:channelId', (req, res) => {
   const { channelId } = req.params
   const since = Math.floor(Date.now() / 1000) - 86400

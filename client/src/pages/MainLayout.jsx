@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones } from 'lucide-react'
+import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones, Search } from 'lucide-react'
 import { useAuth, useAvatarColor, useUserAvatar } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
@@ -14,6 +14,7 @@ import UserContextMenu from '../components/UserContextMenu'
 import ChannelContextMenu from '../components/ChannelContextMenu'
 import ConfirmModal from '../components/ConfirmModal'
 import CreateChannelModal from '../components/CreateChannelModal'
+import SearchModal from '../components/SearchModal'
 
 export default function MainLayout() {
   const { nickname, logout } = useAuth()
@@ -40,6 +41,7 @@ export default function MainLayout() {
   const [channelContextMenu, setChannelContextMenu] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null)
   const [createModal, setCreateModal] = useState(null)
+  const [showSearch, setShowSearch] = useState(false)
   const [unlockedChannels, setUnlockedChannels] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('unlocked-channels') || '[]')) } catch { return new Set() }
   })
@@ -178,6 +180,9 @@ export default function MainLayout() {
         <div className="sidebar-header" style={{ gap: '0.6rem' }}>
           <img src="/logo 11.png" alt="" style={{ height: '28px', objectFit: 'contain' }} />
           <h2 style={{ fontSize: '1.25rem' }}>Medium</h2>
+          <button className="footer-btn" style={{ marginLeft: 'auto' }} onClick={() => setShowSearch(true)} title="Search">
+            <Search size={16} />
+          </button>
         </div>
 
         <ChannelList
@@ -377,6 +382,19 @@ export default function MainLayout() {
             </div>
           </div>
         </div>
+      )}
+      {showSearch && (
+        <SearchModal
+          channels={channels}
+          nickname={nickname}
+          onClose={(msg) => {
+            setShowSearch(false)
+            if (msg?.channel_id) {
+              const ch = channels.find(c => c.id === msg.channel_id)
+              if (ch) setActiveChannel(ch)
+            }
+          }}
+        />
       )}
     </div>
   )
