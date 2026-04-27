@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Hash, Volume2, Plus, X, MicOff, Headphones } from 'lucide-react'
+import { Hash, Volume2, Plus, X, MicOff, Headphones, Lock } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 
-export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate }) {
+export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate, unlockedChannels, onUnlockNeeded }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened } = useVoice()
@@ -34,6 +34,14 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
     setCreating(false)
   }
 
+  function handleSelect(ch) {
+    if (ch.locked && !unlockedChannels?.has(ch.id)) {
+      onUnlockNeeded?.(ch)
+      return
+    }
+    onSelect(ch)
+  }
+
   const ChannelIcon = type === 'text' ? Hash : Volume2
 
   return (
@@ -61,17 +69,20 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
         const users = occupancy[ch.id] || []
         const isJoinedVoice = joined && voiceChannel?.id === ch.id
         const allUsers = isJoinedVoice ? [...users.filter(u => u !== nickname), nickname] : users
+        const isLocked = ch.locked && !unlockedChannels?.has(ch.id)
 
         return (
           <div key={ch.id}>
             <div
-              className={`channel-item ${activeId === ch.id ? 'active' : ''}`}
-              onClick={() => onSelect(ch)}
+              className={`channel-item ${activeId === ch.id ? 'active' : ''}${isLocked ? ' channel-locked' : ''}`}
+              onClick={() => handleSelect(ch)}
               onContextMenu={(e) => { e.preventDefault(); onChannelContextMenu?.(e, ch) }}
             >
-              <span className="channel-icon"><ChannelIcon size={16} /></span>
+              <span className="channel-icon">
+                {isLocked ? <Lock size={16} /> : <ChannelIcon size={16} />}
+              </span>
               <span className="channel-name">{ch.name}</span>
-              {type === 'voice' && isJoinedVoice && (
+              {type === 'voice' && isJoinedVoice && !isLocked && (
                 <button
                   className="voice-disconnect-inline"
                   onClick={(e) => { e.stopPropagation(); leaveVoice() }}
@@ -81,7 +92,7 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                 </button>
               )}
             </div>
-            {allUsers.length > 0 && (
+            {allUsers.length > 0 && !isLocked && (
               <div className="voice-users-list">
                 {allUsers.map((name, i) => (
                   <div

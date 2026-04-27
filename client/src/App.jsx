@@ -11,10 +11,20 @@ export default function App() {
   const [auth, setAuth] = useState(() => {
     const token = localStorage.getItem('token')
     const nickname = localStorage.getItem('nickname')
+    const userId = localStorage.getItem('userId')
     const avatarColor = loadSettings().avatarColor || nicknameToColor(nickname || '')
-    return token ? { token, nickname, ready: false, avatarColor, userColors: {}, userProfiles: {} } : null
+    return token ? { token, nickname, userId, ready: false, avatarColor, userColors: {}, userProfiles: {} } : null
   })
   const [socket, setSocket] = useState(null)
+
+  function handleLogout() {
+    if (socket) socket.disconnect()
+    localStorage.removeItem('token')
+    localStorage.removeItem('nickname')
+    localStorage.removeItem('userId')
+    setAuth(null)
+    setSocket(null)
+  }
 
   useEffect(() => {
     if (!auth?.token) {
@@ -29,6 +39,12 @@ export default function App() {
       .then((data) => {
         if (data.valid) {
           const s = io({ auth: { token: auth.token }, transports: ['websocket'] })
+
+          s.on('connect_error', (err) => {
+            if (err.message === 'Nickname in use') {
+              handleLogout()
+            }
+          })
 
           s.on('user:colors', (colors) => {
             setAuth((a) => a ? { ...a, userColors: colors } : a)
@@ -57,19 +73,12 @@ export default function App() {
     return () => {}
   }, [auth?.token])
 
-  function handleLogin(token, nickname) {
+  function handleLogin(token, nickname, userId) {
     const avatarColor = loadSettings().avatarColor || nicknameToColor(nickname)
     localStorage.setItem('token', token)
     localStorage.setItem('nickname', nickname)
-    setAuth({ token, nickname, ready: false, avatarColor, userColors: {}, userProfiles: {} })
-  }
-
-  function handleLogout() {
-    if (socket) socket.disconnect()
-    localStorage.removeItem('token')
-    localStorage.removeItem('nickname')
-    setAuth(null)
-    setSocket(null)
+    localStorage.setItem('userId', userId)
+    setAuth({ token, nickname, userId, ready: false, avatarColor, userColors: {}, userProfiles: {} })
   }
 
   function updateAvatarColor(color) {

@@ -464,7 +464,14 @@ body {
 
 .channel-item.active {
   background: var(--bg-active);
-  color: var(--text-primary);
+}
+
+.channel-locked {
+  opacity: 0.6;
+}
+
+.channel-locked .channel-icon {
+  color: var(--accent);
 }
 
 .channel-icon {
@@ -553,6 +560,10 @@ body {
 
 .message:hover {
   background: var(--bg-hover);
+}
+
+.message-impersonator {
+  opacity: 0.55;
 }
 
 .message-avatar {

@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken')
+const { onlineUsers } = require('../store')
 
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization
@@ -24,8 +25,18 @@ function socketAuthMiddleware(socket, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     socket.user = decoded
+
+    for (const [, entry] of onlineUsers) {
+      if (entry.nickname === decoded.nickname && entry.userId !== decoded.userId) {
+        return next(new Error('Nickname in use'))
+      }
+    }
+
     next()
-  } catch {
+  } catch (err) {
+    if (err.message === 'Nickname in use') {
+      return next(err)
+    }
     return next(new Error('Invalid or expired token'))
   }
 }

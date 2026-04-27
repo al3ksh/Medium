@@ -1,15 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X, Paperclip, Reply } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
-import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
+import { useUserColor, useUserAvatar, useAuth } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
+
+function hashColor(str) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const h = Math.abs(hash) % 360
+  return `hsl(${h}, 70%, 60%)`
+}
 
 export default function Chat({ channel, users, nickname, onUserClick, onUserContextMenu }) {
   const socket = useSocket()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
+  const auth = useAuth()
+  const myUserId = auth?.userId
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [imageViewer, setImageViewer] = useState(null)
@@ -139,11 +150,13 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         ) : messages.length === 0 ? (
           <div className="chat-empty">No messages yet. Say something!</div>
         ) : (
-          messages.map((msg) => (
-            <div key={msg.id} id={`msg-${msg.id}`} className="message" onContextMenu={(e) => { e.preventDefault(); setReplyTo(msg) }}>
+          messages.map((msg) => {
+            const isImpersonated = msg.nickname === nickname && msg.user_id && msg.user_id !== myUserId
+            return (
+            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}`} onContextMenu={(e) => { e.preventDefault(); setReplyTo(msg) }}>
               <div
                 className="message-avatar clickable"
-                style={getAvatar(msg.nickname) ? {} : { background: getColor(msg.nickname) }}
+                style={getAvatar(msg.nickname) ? {} : { background: isImpersonated ? hashColor(msg.user_id) : getColor(msg.nickname) }}
                 onClick={(e) => onUserClick?.({ user: msg.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
                      onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, msg.nickname) }}
               >
@@ -153,7 +166,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                 <div className="message-header">
                   <span
                     className="message-nick clickable"
-                    style={{ color: getColor(msg.nickname) }}
+                    style={{ color: isImpersonated ? hashColor(msg.user_id) : getColor(msg.nickname) }}
                     onClick={(e) => onUserClick?.({ user: msg.nickname, x: e.clientX + 10, y: e.clientY - 100 })}
                 onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, msg.nickname) }}
                   >
@@ -203,7 +216,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                 )}
               </div>
             </div>
-          ))
+          )})
         )}
         <div ref={bottomRef} />
       </div>

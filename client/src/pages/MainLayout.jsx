@@ -40,6 +40,12 @@ export default function MainLayout() {
   const [channelContextMenu, setChannelContextMenu] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null)
   const [createModal, setCreateModal] = useState(null)
+  const [unlockedChannels, setUnlockedChannels] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('unlocked-channels') || '[]')) } catch { return new Set() }
+  })
+  const [unlockModal, setUnlockModal] = useState(null)
+  const [unlockPassword, setUnlockPassword] = useState('')
+  const [unlockError, setUnlockError] = useState('')
 
   useEffect(() => {
     fetch('/api/channels', {
@@ -144,6 +150,28 @@ export default function MainLayout() {
   const textChannels = channels.filter((c) => c.type === 'text')
   const voiceChannels = channels.filter((c) => c.type === 'voice')
 
+  function handleUnlock(channel) {
+    setUnlockModal(channel)
+    setUnlockPassword('')
+    setUnlockError('')
+  }
+
+  function submitUnlock() {
+    socket.emit('channel:unlock', unlockPassword, (res) => {
+      if (res?.ok) {
+        const newSet = new Set(unlockedChannels)
+        channels.filter(c => c.locked).forEach(c => newSet.add(c.id))
+        setUnlockedChannels(newSet)
+        localStorage.setItem('unlocked-channels', JSON.stringify([...newSet]))
+        setUnlockModal(null)
+        setActiveChannel(unlockModal)
+        setShowMobileSidebar(false)
+      } else {
+        setUnlockError(res?.error || 'Wrong password')
+      }
+    })
+  }
+
   return (
     <div className="app-layout">
       <aside className={`sidebar ${showMobileSidebar ? 'mobile-open' : ''}`}>
@@ -169,6 +197,8 @@ export default function MainLayout() {
           }}
           onChannelContextMenu={handleChannelContextMenu}
           onRequestCreate={() => {}}
+          unlockedChannels={unlockedChannels}
+          onUnlockNeeded={handleUnlock}
         />
 
         <ChannelList
@@ -190,6 +220,8 @@ export default function MainLayout() {
           onUserClick={setUserPopup}
           onUserContextMenu={handleContextMenu}
           onRequestCreate={() => {}}
+          unlockedChannels={unlockedChannels}
+          onUnlockNeeded={handleUnlock}
         />
 
         <div className="sidebar-footer">
@@ -316,6 +348,35 @@ export default function MainLayout() {
           }}
           onCancel={() => setCreateModal(null)}
         />
+      )}
+      {unlockModal && (
+        <div className="modal-overlay" onClick={() => setUnlockModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Locked Channel</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              #{unlockModal.name} requires a password to access
+            </p>
+            <input
+              type="password"
+              placeholder="Channel password"
+              value={unlockPassword}
+              onChange={(e) => setUnlockPassword(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && unlockPassword && submitUnlock()}
+              style={{
+                width: '100%', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius)',
+                border: '2px solid var(--border-color, rgba(255,255,255,0.06))',
+                background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                fontSize: '1rem', outline: 'none', marginBottom: '0.75rem', boxSizing: 'border-box',
+              }}
+            />
+            {unlockError && <p style={{ color: 'var(--red)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{unlockError}</p>}
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button className="btn-cancel" onClick={() => setUnlockModal(null)}>Cancel</button>
+              <button className="btn-confirm" disabled={!unlockPassword} onClick={submitUnlock}>Unlock</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

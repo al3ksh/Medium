@@ -1,3 +1,5 @@
+const { db } = require('../db')
+
 function buildOccupancy(io) {
   const occupancy = {}
   for (const [, s] of io.sockets.sockets) {
@@ -11,6 +13,10 @@ function buildOccupancy(io) {
 
 function registerVoiceHandlers(io, socket) {
   socket.on('voice:join', (channelId) => {
+    const channel = db.prepare('SELECT id, type, locked FROM channels WHERE id = ?').get(channelId)
+    if (!channel || channel.type !== 'voice') return
+    if (channel.locked && !socket.unlockedChannels?.has(channelId)) return
+
     socket.join(`voice:${channelId}`)
     socket.voiceChannel = channelId
 

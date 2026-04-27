@@ -12,10 +12,10 @@ export default function AuthGate({ onLogin }) {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/check-passphrase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passphrase, nickname: 'check' }),
+        body: JSON.stringify({ passphrase }),
       })
       if (res.ok) {
         setStep('nickname')
@@ -41,7 +41,7 @@ export default function AuthGate({ onLogin }) {
       })
       const data = await res.json()
       if (res.ok) {
-        onLogin(data.token, data.nickname)
+        onLogin(data.token, data.nickname, data.userId)
       } else {
         setError(data.error || 'Something went wrong')
       }

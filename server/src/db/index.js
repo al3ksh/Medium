@@ -37,8 +37,6 @@ function migrate() {
       nickname TEXT PRIMARY KEY,
       bio TEXT NOT NULL DEFAULT ''
     );
-
-    INSERT OR IGNORE INTO channels (id, name, type) VALUES ('general', 'general', 'text');
   `)
 
   const cols = db.prepare("PRAGMA table_info(messages)").all().map(c => c.name)
@@ -52,6 +50,31 @@ function migrate() {
   }
   if (!profileCols.includes('banner_url')) {
     db.exec('ALTER TABLE user_bios ADD COLUMN banner_url TEXT DEFAULT NULL')
+  }
+
+  const msgCols = db.prepare("PRAGMA table_info(messages)").all().map(c => c.name)
+  if (!msgCols.includes('user_id')) {
+    db.exec('ALTER TABLE messages ADD COLUMN user_id TEXT')
+  }
+
+  const chanCols = db.prepare("PRAGMA table_info(channels)").all().map(c => c.name)
+  if (!chanCols.includes('locked')) {
+    db.exec('ALTER TABLE channels ADD COLUMN locked INTEGER NOT NULL DEFAULT 0')
+  }
+
+  db.exec(`
+    INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('general', 'general', 'text', 0);
+    INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('voice-1', 'Voice 1', 'voice', 0);
+    INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('voice-2', 'Voice 2', 'voice', 0);
+    INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('voice-3', 'Voice 3', 'voice', 0);
+  `)
+
+  const privPass = process.env.PRIVATE_PASSWORD
+  if (privPass) {
+    db.exec(`
+      INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('private', 'Private', 'text', 1);
+      INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('private-voice', 'Private Voice', 'voice', 1);
+    `)
   }
 }
 

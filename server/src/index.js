@@ -10,6 +10,7 @@ const { socketAuthMiddleware } = require('./middleware/auth')
 const { startPurgeInterval } = require('./services/purge')
 const { registerChatHandlers } = require('./socket/chat')
 const { registerVoiceHandlers } = require('./socket/voice')
+const { onlineUsers } = require('./store')
 
 const authRoutes = require('./routes/auth')
 const channelRoutes = require('./routes/channels')
@@ -71,7 +72,6 @@ app.get('/api/health', (req, res) => {
 migrate()
 startPurgeInterval()
 
-const onlineUsers = new Map()
 const userColors = new Map()
 const userProfiles = new Map()
 
@@ -95,17 +95,30 @@ function broadcastColors() {
 io.use(socketAuthMiddleware)
 
 io.on('connection', (socket) => {
-  const { nickname } = socket.user
-  onlineUsers.set(socket.id, nickname)
+  const { nickname, userId } = socket.user
+  onlineUsers.set(socket.id, { nickname, userId })
 
-  console.log(`[socket] ${nickname} connected (${socket.id})`)
-  io.emit('users:update', Array.from(onlineUsers.values()))
+  console.log(`[socket] ${nickname} (${userId?.slice(0,8)}) connected (${socket.id})`)
+  io.emit('users:update', Array.from(onlineUsers.values()).map(u => u.nickname))
 
   socket.emit('user:colors', Object.fromEntries(userColors))
   socket.emit('user:profiles', Object.fromEntries(userProfiles))
 
   registerChatHandlers(io, socket)
   registerVoiceHandlers(io, socket)
+
+  socket.on('channel:unlock', (password, callback) => {
+    if (password === process.env.PRIVATE_PASSWORD) {
+      if (!socket.unlockedChannels) socket.unlockedChannels = new Set()
+      const lockedChannels = db.prepare('SELECT id FROM channels WHERE locked = 1').all()
+      for (const ch of lockedChannels) {
+        socket.unlockedChannels.add(ch.id)
+      }
+      if (callback) callback({ ok: true })
+    } else {
+      if (callback) callback({ error: 'Wrong password' })
+    }
+  })
 
   socket.on('user:color', (color) => {
     userColors.set(nickname, color)
@@ -166,12 +179,12 @@ io.on('connection', (socket) => {
     }
 
     let stillOnline = false
-    for (const [, nick] of onlineUsers) {
-      if (nick === nickname) { stillOnline = true; break }
+    for (const [, entry] of onlineUsers) {
+      if (entry.nickname === nickname) { stillOnline = true; break }
     }
     if (!stillOnline) userColors.delete(nickname)
 
-    io.emit('users:update', Array.from(onlineUsers.values()))
+    io.emit('users:update', Array.from(onlineUsers.values()).map(u => u.nickname))
     broadcastColors()
     broadcastProfiles()
   })

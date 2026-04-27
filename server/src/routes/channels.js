@@ -5,6 +5,19 @@ const { authMiddleware } = require('../middleware/auth')
 
 router.use(authMiddleware)
 
+router.post('/unlock', (req, res) => {
+  const { password } = req.body
+  if (!password) {
+    return res.status(400).json({ error: 'Password required' })
+  }
+
+  if (password !== process.env.PRIVATE_PASSWORD) {
+    return res.status(403).json({ error: 'Wrong password' })
+  }
+
+  res.json({ unlocked: true })
+})
+
 router.get('/', (req, res) => {
   const channels = db.prepare('SELECT * FROM channels ORDER BY name ASC').all()
   res.json(channels)
