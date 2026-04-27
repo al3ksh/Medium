@@ -8,6 +8,7 @@ import { showToast } from './ToastContainer'
 import { playNotifSound } from '../utils/notif'
 import EmojiPicker from './EmojiPicker'
 import LinkPreview from './LinkPreview'
+import FadeImage from './FadeImage'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
 
@@ -333,16 +334,15 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                 ))}
                 {msg.content && isGifUrl(msg.content) && (
                   <div className="message-gif-container">
-                    <img src={msg.content.trim()} alt="GIF" className="message-gif" loading="lazy" onClick={() => setImageViewer(msg.content.trim())} />
+                    <FadeImage src={msg.content.trim()} alt="GIF" className="message-gif" onClick={() => setImageViewer(msg.content.trim())} />
                   </div>
                 )}
                 {msg.attachment && isImage(msg.attachment_type) && (
                   <div className={`message-image-container${!!msg.nsfw ? ' nsfw-blur-container' : ''}`}>
-                    <img
+                    <FadeImage
                       src={msg.attachment}
                       alt=""
                       className={`message-image${!!msg.nsfw && !revealedNsfw.has(msg.id) ? ' nsfw-blur' : ''}`}
-                      loading="lazy"
                       onClick={() => !msg.nsfw || revealedNsfw.has(msg.id) ? setImageViewer(msg.attachment) : undefined}
                     />
                     {!!msg.nsfw && (
