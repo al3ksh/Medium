@@ -3,7 +3,7 @@ import { Hash, Volume2, Plus, X, MicOff, Headphones, Lock } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 
-export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate, unlockedChannels, onUnlockNeeded }) {
+export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate, unlockedChannels, onUnlockNeeded, unread }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened } = useVoice()
@@ -82,6 +82,9 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                 {isLocked ? <Lock size={16} /> : <ChannelIcon size={16} />}
               </span>
               <span className="channel-name">{ch.name}</span>
+              {type === 'text' && unread?.[ch.id] > 0 && activeId !== ch.id && (
+                <span className="channel-unread-badge">{unread[ch.id]}</span>
+              )}
               {type === 'voice' && isJoinedVoice && !isLocked && (
                 <button
                   className="voice-disconnect-inline"

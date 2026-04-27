@@ -36,6 +36,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
   const [revealedNsfw, setRevealedNsfw] = useState(new Set())
+  const [newMsgId, setNewMsgId] = useState(null)
 
   function toggleNsfw(msgId, e) {
     e.stopPropagation()
@@ -68,6 +69,8 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
     function onNewMessage(msg) {
       if (msg.channel_id === channel.id) {
         setMessages((prev) => [...prev, msg])
+        setNewMsgId(msg.id)
+        setTimeout(() => setNewMsgId(null), 300)
       }
       if (msg.nickname !== nickname && msg.content) {
         const isEveryone = msg.content.includes('@everyone') || msg.content.includes('@here')
@@ -266,7 +269,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
             const isOwn = msg.user_id === myUserId
             const isEditing = editingId === msg.id
             return (
-            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}`}>
+            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}${msg.id === newMsgId ? ' msg-new' : ''}`}>
               <div
                 className="message-avatar clickable"
                 style={getAvatar(msg.nickname) ? {} : { background: isImpersonated ? hashColor(msg.user_id) : getColor(msg.nickname) }}
@@ -315,6 +318,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitEdit() }
                         if (e.key === 'Escape') { e.stopPropagation(); setEditingId(null); setEditText('') }
                       }}
+                      onBlur={() => { setEditingId(null); setEditText('') }}
                       autoFocus
                     />
                     <span className="message-edit-hint">escape to cancel, enter to save</span>
@@ -417,7 +421,10 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         </div>
       )}
 
-      <MessageInput onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} users={users} nickname={nickname} channelId={channel.id} socket={socket} />
+      <MessageInput onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} users={users} nickname={nickname} channelId={channel.id} socket={socket} onRequestEditLast={() => {
+        const lastOwn = [...messages].reverse().find(m => m.nickname === nickname && m.user_id === myUserId)
+        if (lastOwn) { setEditingId(lastOwn.id); setEditText(lastOwn.content || '') }
+      }} />
 
       {reactPicker !== null && (
         <div className="reaction-picker-fixed" style={{ left: reactPickerPos.x, top: reactPickerPos.y }}>

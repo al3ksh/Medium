@@ -527,6 +527,21 @@ body {
   white-space: nowrap;
 }
 
+.channel-unread-badge {
+  background: var(--red);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
 /* ========== MAIN CONTENT ========== */
 
 .main-content {
@@ -593,6 +608,21 @@ body {
   gap: 0.75rem;
   padding: 0.35rem 0;
   border-radius: var(--radius);
+}
+
+.message.msg-new {
+  animation: msg-appear 0.2s ease-out;
+}
+
+@keyframes msg-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message:hover {
@@ -1219,8 +1249,12 @@ body {
   font-size: 0.85rem;
   color: var(--text-primary);
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  animation: toast-in 0.3s ease, toast-out 0.3s ease 3.7s forwards;
+  animation: toast-in 0.3s ease;
   pointer-events: auto;
+}
+
+.toast-exit {
+  animation: toast-out 0.3s ease forwards;
 }
 
 .toast-message {
@@ -1471,6 +1505,33 @@ body {
   opacity: 1;
 }
 
+.upload-progress-bar {
+  position: relative;
+  height: 3px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.upload-progress-text {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0;
+  color: var(--text-muted);
+}
+
+.upload-progress-bar:has(.upload-progress-fill[style*="width: 0"]) .upload-progress-text,
+.upload-progress-bar:not(:has(.upload-progress-fill)) .upload-progress-text {
+  display: none;
+}
+
 .message-input-row {
   display: flex;
   gap: 0.5rem;
@@ -1610,6 +1671,26 @@ body {
 
 .picker-search input::placeholder {
   color: var(--text-muted);
+}
+
+.emoji-recent {
+  padding: 4px 8px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.emoji-recent-label {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.emoji-recent-grid {
+  max-height: 68px;
+  overflow: hidden;
 }
 
 .emoji-categories {

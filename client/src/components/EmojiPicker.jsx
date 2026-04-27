@@ -1,4 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+const RECENT_KEY = 'medium-recent-emoji'
+const MAX_RECENT = 12
+
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || [] } catch { return [] }
+}
+
+function addRecent(emoji) {
+  const list = getRecent().filter(e => e !== emoji)
+  list.unshift(emoji)
+  localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, MAX_RECENT)))
+}
 
 const EMOJIS = {
   'Smileys': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'],
@@ -15,6 +28,14 @@ const EMOJIS = {
 export default function EmojiPicker({ onSelect, onClose }) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState(Object.keys(EMOJIS)[0])
+  const [recent, setRecent] = useState(getRecent())
+
+  function handleSelect(emoji) {
+    addRecent(emoji)
+    setRecent(getRecent())
+    onSelect(emoji)
+    onClose()
+  }
 
   const allEmojis = search
     ? Object.values(EMOJIS).flat().filter(e => e.toLowerCase().includes(search.toLowerCase()))
@@ -31,6 +52,22 @@ export default function EmojiPicker({ onSelect, onClose }) {
           autoFocus
         />
       </div>
+      {!search && recent.length > 0 && (
+        <div className="emoji-recent">
+          <span className="emoji-recent-label">Recent</span>
+          <div className="emoji-grid emoji-recent-grid">
+            {recent.map((emoji, i) => (
+              <button
+                key={`recent-${i}`}
+                className="emoji-item"
+                onClick={() => handleSelect(emoji)}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {!search && (
         <div className="emoji-categories">
           {Object.keys(EMOJIS).map(cat => (
@@ -49,7 +86,7 @@ export default function EmojiPicker({ onSelect, onClose }) {
           <button
             key={`${emoji}-${i}`}
             className="emoji-item"
-            onClick={() => { onSelect(emoji); onClose() }}
+            onClick={() => handleSelect(emoji)}
           >
             {emoji}
           </button>

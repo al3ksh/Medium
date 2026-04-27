@@ -2,12 +2,14 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Paperclip, SendHorizonal, X, Reply, Smile, ImageIcon } from 'lucide-react'
 import EmojiPicker from './EmojiPicker'
 import GifPicker from './GifPicker'
+import { showToast } from './ToastContainer'
 
-export default function MessageInput({ onSend, replyTo, onCancelReply, users, nickname, channelId, socket }) {
+export default function MessageInput({ onSend, replyTo, onCancelReply, users, nickname, channelId, socket, lastOwnMessageId, onRequestEditLast }) {
   const [text, setText] = useState('')
   const [file, setFile] = useState(null)
   const [filePreview, setFilePreview] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [mentionQuery, setMentionQuery] = useState(null)
   const [mentionIndex, setMentionIndex] = useState(0)
   const [activePicker, setActivePicker] = useState(null)
@@ -39,6 +41,10 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     : []
 
   function setFileWithPreview(f) {
+    if (f && f.size > 20 * 1024 * 1024) {
+      showToast?.('File too large (max 20 MB)')
+      return
+    }
     setFile(f)
     setNsfw(false)
     if (f && f.type?.startsWith('image/')) {
@@ -63,19 +69,27 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     let attachmentData = null
     if (file) {
       setUploading(true)
+      setUploadProgress(0)
       try {
         const formData = new FormData()
         formData.append('file', file)
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          body: formData,
+        const xhr = new XMLHttpRequest()
+        attachmentData = await new Promise((resolve, reject) => {
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100))
+          })
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText))
+            else resolve(null)
+          })
+          xhr.addEventListener('error', () => resolve(null))
+          xhr.open('POST', '/api/upload')
+          xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('token')}`)
+          xhr.send(formData)
         })
-        if (res.ok) {
-          attachmentData = await res.json()
-        }
       } catch {}
       setUploading(false)
+      setUploadProgress(0)
       clearFile()
     }
 
@@ -146,6 +160,10 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e)
+    }
+    if (e.key === 'ArrowUp' && text === '' && !mentionUsers.length && onRequestEditLast) {
+      e.preventDefault()
+      onRequestEditLast()
     }
   }
 
@@ -237,7 +255,13 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
               <span className="nsfw-toggle-text">NSFW</span>
             </button>
           )}
-          <button type="button" className="file-preview-remove" onClick={clearFile}><X size={16} /></button>
+          <button type="button" className="file-preview-remove" onClick={clearFile} disabled={uploading}><X size={16} /></button>
+        </div>
+      )}
+      {uploading && (
+        <div className="upload-progress-bar">
+          <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
+          <span className="upload-progress-text">{uploadProgress < 100 ? `${uploadProgress}%` : 'Processing...'}</span>
         </div>
       )}
       <div className="message-input-row" style={{ position: 'relative' }}>

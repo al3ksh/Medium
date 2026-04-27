@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones, Search } from 'lucide-react'
 import { useAuth, useAvatarColor, useUserAvatar } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
@@ -27,6 +27,7 @@ export default function MainLayout() {
 
   function setActiveChannel(ch) {
     setActiveChannelRaw(ch)
+    activeChannelRef.current = ch
     if (ch) {
       localStorage.setItem('active-channel', JSON.stringify({ id: ch.id, name: ch.name, type: ch.type }))
     } else {
@@ -42,12 +43,23 @@ export default function MainLayout() {
   const [confirmModal, setConfirmModal] = useState(null)
   const [createModal, setCreateModal] = useState(null)
   const [showSearch, setShowSearch] = useState(false)
+  const activeChannelRef = useRef(null)
   const [unlockedChannels, setUnlockedChannels] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('unlocked-channels') || '[]')) } catch { return new Set() }
   })
   const [unlockModal, setUnlockModal] = useState(null)
   const [unlockPassword, setUnlockPassword] = useState('')
   const [unlockError, setUnlockError] = useState('')
+  const [unread, setUnread] = useState({})
+
+  function clearUnread(channelId) {
+    setUnread(prev => {
+      if (!prev[channelId]) return prev
+      const next = { ...prev }
+      delete next[channelId]
+      return next
+    })
+  }
 
   useEffect(() => {
     fetch('/api/channels', {
@@ -81,12 +93,30 @@ export default function MainLayout() {
 
     socket.on('users:update', setUsers)
 
+    socket.on('message:unread', ({ channel_id }) => {
+      if (channel_id !== activeChannelRef.current?.id) {
+        setUnread((prev) => ({ ...prev, [channel_id]: (prev[channel_id] || 0) + 1 }))
+      }
+    })
+
     return () => {
       socket.off('channel:created')
       socket.off('channel:deleted')
       socket.off('channel:renamed')
       socket.off('users:update')
+      socket.off('message:unread')
     }
+  }, [])
+
+  useEffect(() => {
+    function handleGlobalKey(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowSearch(v => !v)
+      }
+    }
+    document.addEventListener('keydown', handleGlobalKey)
+    return () => document.removeEventListener('keydown', handleGlobalKey)
   }, [])
 
   const handleContextMenu = useCallback((e, user) => {
@@ -192,6 +222,7 @@ export default function MainLayout() {
           activeId={activeChannel?.id}
           onSelect={(ch) => {
             setActiveChannel(ch)
+            clearUnread(ch.id)
             setShowMobileSidebar(false)
           }}
           type="text"
@@ -205,6 +236,7 @@ export default function MainLayout() {
           onRequestCreate={() => {}}
           unlockedChannels={unlockedChannels}
           onUnlockNeeded={handleUnlock}
+          unread={unread}
         />
 
         <ChannelList
@@ -213,6 +245,7 @@ export default function MainLayout() {
           activeId={activeChannel?.id}
           onSelect={(ch) => {
             setActiveChannel(ch)
+            clearUnread(ch.id)
             setShowMobileSidebar(false)
           }}
           type="voice"
