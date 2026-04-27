@@ -237,6 +237,15 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       (/^https?:\/\/.+/i.test(trimmed) && trimmed.endsWith('.gif') && !trimmed.includes(' '))
   }
 
+  useEffect(() => {
+    if (!imageViewer) return
+    function handleKey(e) {
+      if (e.key === 'Escape') setImageViewer(null)
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [imageViewer])
+
   return (
     <div className="chat-container">
       <div className="chat-header">

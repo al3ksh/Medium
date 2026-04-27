@@ -5,6 +5,7 @@ import { useSocket } from '../contexts/SocketContext'
 import { nicknameToColor, loadSettings, saveSettings, THEMES, THEME_VARS, applyTheme } from '../utils'
 import { X, LogOut, Check, Palette, Camera, Trash2 } from 'lucide-react'
 import CropModal from './CropModal'
+import ConfirmModal from './ConfirmModal'
 
 const MAX_BIO = 190
 
@@ -140,6 +141,7 @@ export default function SettingsModal({ onClose }) {
   const voice = useVoice()
   const [tab, setTab] = useState('account')
   const [settings, setSettings] = useState(loadSettings)
+  const [logoutConfirm, setLogoutConfirm] = useState(false)
 
   function update(patch) {
     const next = { ...settings, ...patch }
@@ -161,7 +163,7 @@ export default function SettingsModal({ onClose }) {
             </button>
           ))}
           <div className="settings-sidebar-sep" />
-          <button className="settings-tab logout" onClick={() => { onClose(); logout() }}>
+          <button className="settings-tab logout" onClick={() => setLogoutConfirm(true)}>
             <LogOut size={16} /> Log Out
           </button>
         </div>
@@ -182,6 +184,16 @@ export default function SettingsModal({ onClose }) {
           </div>
         </div>
       </div>
+      {logoutConfirm && (
+        <ConfirmModal
+          title="Log Out"
+          message="Are you sure you want to log out?"
+          confirmLabel="Log Out"
+          danger
+          onConfirm={() => { onClose(); logout() }}
+          onCancel={() => setLogoutConfirm(false)}
+        />
+      )}
     </div>
   )
 }
@@ -388,16 +400,7 @@ function VoiceTab({ settings, onUpdate, voice }) {
   }, [settings.inputDevice])
 
   function testMic() {
-    const refs = audioRefs.current;
-    if (!refs) return;
-    
-    if (isTesting) {
-      refs.analyser.disconnect(refs.ctx.destination);
-      setIsTesting(false);
-    } else {
-      refs.analyser.connect(refs.ctx.destination);
-      setIsTesting(true);
-    }
+    setIsTesting(v => !v)
   }
 
   return (

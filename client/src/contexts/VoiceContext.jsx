@@ -25,6 +25,7 @@ export function VoiceProvider({ children }) {
   const remoteAudioRefs = useRef({})
   const pingInterval = useRef(null)
   const autoRejoined = useRef(false)
+  const rafId = useRef(null)
 
   useEffect(() => {
     if (!socket || autoRejoined.current) return
@@ -200,6 +201,7 @@ export function VoiceProvider({ children }) {
       const dataArray = new Uint8Array(analyser.frequencyBinCount)
 
       function detectSpeaking() {
+        if (!rawStream.current) return
         analyser.getByteFrequencyData(dataArray)
         const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length
 
@@ -212,7 +214,7 @@ export function VoiceProvider({ children }) {
           isSpeaking = avg > manualThreshold
         }
         socket.emit('voice:speaking', isSpeaking)
-        requestAnimationFrame(detectSpeaking)
+        rafId.current = requestAnimationFrame(detectSpeaking)
       }
       detectSpeaking()
 
@@ -226,6 +228,10 @@ export function VoiceProvider({ children }) {
   }
 
   function leaveVoice() {
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current)
+      rafId.current = null
+    }
     if (rawStream.current) {
       rawStream.current.getTracks().forEach((t) => t.stop())
       rawStream.current = null

@@ -43,12 +43,14 @@
   --text-primary: #e0e0e0;
   --text-secondary: #a0a0a0;
   --text-muted: #707070;
-  --accent: #5865f2;
-  --accent-hover: #4752c4;
+  --accent: #6ae7c3;
+  --accent-hover: #4dd4a8;
+  --accent-glow: rgba(106,231,195,0.25);
   --red: #ed4245;
   --green: #23a559;
   --yellow: #f0b232;
   --border: #1e1e1e;
+  --border-color: rgba(255,255,255,0.06);
   --radius: 4px;
 }
 

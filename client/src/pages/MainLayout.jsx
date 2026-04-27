@@ -70,12 +70,13 @@ export default function MainLayout() {
 
     socket.on('channel:deleted', (channelId) => {
       setChannels((prev) => prev.filter((c) => c.id !== channelId))
-      if (activeChannel?.id === channelId) setActiveChannel(null)
+      setActiveChannelRaw((prev) => prev?.id === channelId ? null : prev)
+      localStorage.removeItem('active-channel')
     })
 
     socket.on('channel:renamed', (updated) => {
       setChannels((prev) => prev.map((c) => c.id === updated.id ? { ...c, name: updated.name } : c))
-      if (activeChannel?.id === updated.id) setActiveChannel((prev) => prev ? { ...prev, name: updated.name } : prev)
+      setActiveChannelRaw((prev) => prev?.id === updated.id ? { ...prev, name: updated.name } : prev)
     })
 
     socket.on('users:update', setUsers)

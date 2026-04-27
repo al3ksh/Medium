@@ -29,15 +29,18 @@ export default function App() {
 
   useEffect(() => {
     if (!auth?.token) {
-      setSocket(null)
+      if (socket) { socket.disconnect(); setSocket(null) }
       return
     }
+
+    let disposed = false
 
     fetch('/api/auth/verify', {
       headers: { Authorization: `Bearer ${auth.token}` },
     })
       .then((r) => r.json())
       .then((data) => {
+        if (disposed) return
         if (data.valid) {
           const s = io({ auth: { token: auth.token }, transports: ['websocket'] })
 
@@ -61,18 +64,24 @@ export default function App() {
           localStorage.removeItem('token')
           localStorage.removeItem('nickname')
           setAuth(null)
-          setSocket(null)
         }
       })
       .catch(() => {
+        if (disposed) return
         localStorage.removeItem('token')
         localStorage.removeItem('nickname')
         setAuth(null)
-        setSocket(null)
       })
 
-    return () => {}
+    return () => { disposed = true }
   }, [auth?.token])
+
+  useEffect(() => {
+    if (socket && auth?.avatarColor && auth?.nickname) {
+      const t = setTimeout(() => socket.emit('user:color', auth.avatarColor), 500)
+      return () => clearTimeout(t)
+    }
+  }, [socket, auth?.avatarColor, auth?.nickname])
 
   function handleLogin(token, nickname, userId) {
     const avatarColor = loadSettings().avatarColor || nicknameToColor(nickname)
@@ -93,11 +102,6 @@ export default function App() {
 
   if (!auth.ready || !socket) {
     return <div className="loading">Connecting...</div>
-  }
-
-  const existingSocket = socket
-  if (auth.avatarColor && auth.nickname) {
-    setTimeout(() => existingSocket.emit('user:color', auth.avatarColor), 500)
   }
 
   return (
