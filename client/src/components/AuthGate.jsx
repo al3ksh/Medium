@@ -54,7 +54,9 @@ export default function AuthGate({ onLogin }) {
   return (
     <div className="auth-gate">
       <div className="auth-card">
-        <h1 className="auth-logo">Medium</h1>
+        <h1 className="auth-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+          <img src="/logo.png" alt="Medium" style={{ height: '48px', objectFit: 'contain' }} />
+        </h1>
         {step === 'passphrase' ? (
           <form onSubmit={handlePassphrase}>
             <p className="auth-subtitle">Enter the passphrase to join</p>

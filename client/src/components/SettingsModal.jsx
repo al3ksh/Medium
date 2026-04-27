@@ -173,6 +173,13 @@ export default function SettingsModal({ onClose }) {
           {tab === 'appearance' && <AppearanceTab settings={settings} onUpdate={update} />}
           {tab === 'voice' && <VoiceTab settings={settings} onUpdate={update} voice={voice} />}
           {tab === 'notifications' && <NotificationsTab settings={settings} onUpdate={update} />}
+          <div className="settings-footer-info">
+            <span>Medium &mdash; Local Network Chat</span>
+            <div className="settings-footer-links">
+              <span>This app uses local storage to save your preferences (cookies).</span>
+              <span>By using Medium you agree to be respectful to other users on this network.</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

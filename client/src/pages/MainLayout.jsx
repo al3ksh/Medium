@@ -147,8 +147,9 @@ export default function MainLayout() {
   return (
     <div className="app-layout">
       <aside className={`sidebar ${showMobileSidebar ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <h2>Medium</h2>
+        <div className="sidebar-header" style={{ gap: '0.6rem' }}>
+          <img src="/logo 11.png" alt="" style={{ height: '28px', objectFit: 'contain' }} />
+          <h2 style={{ fontSize: '1.25rem' }}>Medium</h2>
         </div>
 
         <ChannelList
@@ -232,7 +233,7 @@ export default function MainLayout() {
             <div className="mobile-toggle" onClick={() => setShowMobileSidebar(!showMobileSidebar)}>
               <Menu size={20} />
             </div>
-            <h2>Welcome to Medium</h2>
+            <img src="/logo 11.png" alt="Medium" style={{ height: '72px', marginBottom: '1.5rem', objectFit: 'contain', opacity: 0.9 }} />
             <p>Pick a channel to start talking</p>
           </div>
         ) : activeChannel.type === 'text' ? (
