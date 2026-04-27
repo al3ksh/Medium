@@ -98,6 +98,25 @@ function registerChatHandlers(io, socket) {
     io.to(`text:${msg.channel_id}`).emit('message:edited', { id: messageId, content: newContent })
   })
 
+  socket.on('reaction:toggle', (messageId, emoji) => {
+    const msg = db.prepare('SELECT channel_id FROM messages WHERE id = ?').get(messageId)
+    if (!msg) return
+
+    const channel = db.prepare('SELECT locked FROM channels WHERE id = ?').get(msg.channel_id)
+    if (channel?.locked && !socket.unlockedChannels?.has(msg.channel_id)) return
+
+    const existing = db.prepare('SELECT rowid FROM reactions WHERE message_id = ? AND nickname = ? AND emoji = ?').get(messageId, socket.user.nickname, emoji)
+    if (existing) {
+      db.prepare('DELETE FROM reactions WHERE message_id = ? AND nickname = ? AND emoji = ?').run(messageId, socket.user.nickname, emoji)
+    } else {
+      db.prepare('INSERT INTO reactions (message_id, nickname, emoji) VALUES (?, ?, ?)').run(messageId, socket.user.nickname, emoji)
+    }
+
+    const reactions = db.prepare('SELECT emoji, GROUP_CONCAT(nickname) as nicknames, COUNT(*) as count FROM reactions WHERE message_id = ? GROUP BY emoji').all(messageId)
+    const reactionData = reactions.map(r => ({ emoji: r.emoji, count: r.count, nicknames: r.nicknames.split(',') }))
+    io.to(`text:${msg.channel_id}`).emit('reaction:update', { messageId, reactions: reactionData })
+  })
+
   socket.on('typing:start', (channelId) => {
     if (!channelId) return
     if (!typingUsers.has(channelId)) typingUsers.set(channelId, new Map())

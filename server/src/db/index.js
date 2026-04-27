@@ -37,6 +37,15 @@ function migrate() {
       nickname TEXT PRIMARY KEY,
       bio TEXT NOT NULL DEFAULT ''
     );
+
+    CREATE TABLE IF NOT EXISTS reactions (
+      message_id TEXT NOT NULL,
+      nickname TEXT NOT NULL,
+      emoji TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (message_id, nickname, emoji),
+      FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+    );
   `)
 
   const cols = db.prepare("PRAGMA table_info(messages)").all().map(c => c.name)

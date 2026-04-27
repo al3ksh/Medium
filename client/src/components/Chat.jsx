@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, Paperclip, Reply, Pencil } from 'lucide-react'
+import { Menu, X, Paperclip, Reply, Pencil, SmilePlus } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar, useAuth } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import { renderMarkdown } from '../utils/markdown.jsx'
 import { showToast } from './ToastContainer'
 import { playNotifSound } from '../utils/notif'
+import EmojiPicker from './EmojiPicker'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
 
@@ -32,6 +33,8 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [typingUsers, setTypingUsers] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
+  const [reactPicker, setReactPicker] = useState(null)
+  const [reactPickerPos, setReactPickerPos] = useState({ x: 0, y: 0 })
   const bottomRef = useRef(null)
   const prevMsgCount = useRef(0)
   const token = localStorage.getItem('token')
@@ -81,11 +84,16 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       setMessages((prev) => prev.map((m) => m.id === id ? { ...m, content, edited: true } : m))
     })
 
+    socket.on('reaction:update', ({ messageId, reactions }) => {
+      setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, reactions } : m))
+    })
+
     return () => {
       socket.off('message:new', onNewMessage)
       socket.off('message:deleted', onDeleted)
       socket.off('typing:update')
       socket.off('message:edited')
+      socket.off('reaction:update')
     }
   }, [channel.id])
 
@@ -112,6 +120,38 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
     setEditingId(null)
     setEditText('')
   }
+
+  function toggleReaction(messageId, emoji) {
+    socket.emit('reaction:toggle', messageId, emoji)
+    setReactPicker(null)
+  }
+
+  function openReactPicker(e, msgId) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = Math.min(rect.left, window.innerWidth - 340)
+    const y = rect.bottom + 4 + 300 > window.innerHeight ? rect.top - 4 - 300 : rect.bottom + 4
+    setReactPickerPos({ x, y: Math.max(y, 8) })
+    setReactPicker(reactPicker === msgId ? null : msgId)
+  }
+
+  useEffect(() => {
+    if (reactPicker === null) return
+    function handleClick(e) {
+      const picker = document.querySelector('.reaction-picker-fixed')
+      const btn = e.target.closest('[data-react-btn]')
+      if (btn || (picker && picker.contains(e.target))) return
+      setReactPicker(null)
+    }
+    function handleKey(e) {
+      if (e.key === 'Escape' && editingId === null) setReactPicker(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [reactPicker, editingId])
 
   function handleSend(content, attachmentData) {
     socket.emit('message:send', {
@@ -196,7 +236,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
             const isOwn = msg.user_id === myUserId
             const isEditing = editingId === msg.id
             return (
-            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}`} onContextMenu={(e) => { e.preventDefault(); setReplyTo(msg) }} onDoubleClick={() => startEdit(msg)}>
+            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}`}>
               <div
                 className="message-avatar clickable"
                 style={getAvatar(msg.nickname) ? {} : { background: isImpersonated ? hashColor(msg.user_id) : getColor(msg.nickname) }}
@@ -220,6 +260,9 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                     <button className="message-action" onClick={() => setReplyTo(msg)} title="Reply">
                       <Reply size={14} />
                     </button>
+                    <button className="message-action" data-react-btn onClick={(e) => openReactPicker(e, msg.id)} title="Add Reaction">
+                      <SmilePlus size={14} />
+                    </button>
                     {isOwn && !isEditing && (
                       <button className="message-action" onClick={() => startEdit(msg)} title="Edit">
                         <Pencil size={14} />
@@ -240,7 +283,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                       onChange={(e) => setEditText(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitEdit() }
-                        if (e.key === 'Escape') { setEditingId(null); setEditText('') }
+                        if (e.key === 'Escape') { e.stopPropagation(); setEditingId(null); setEditText('') }
                       }}
                       autoFocus
                     />
@@ -282,6 +325,21 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                 )}
                   </>
                 )}
+                {msg.reactions && msg.reactions.length > 0 && (
+                  <div className="message-reactions">
+                    {msg.reactions.map((r) => (
+                      <button
+                        key={r.emoji}
+                        className={`reaction-chip${r.nicknames.includes(nickname) ? ' reacted' : ''}`}
+                        onClick={() => toggleReaction(msg.id, r.emoji)}
+                        title={r.nicknames.join(', ')}
+                      >
+                        <span className="reaction-emoji">{r.emoji}</span>
+                        <span className="reaction-count">{r.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )})
@@ -311,6 +369,12 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       )}
 
       <MessageInput onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} users={users} nickname={nickname} channelId={channel.id} socket={socket} />
+
+      {reactPicker !== null && (
+        <div className="reaction-picker-fixed" style={{ left: reactPickerPos.x, top: reactPickerPos.y }}>
+          <EmojiPicker onSelect={(emoji) => toggleReaction(reactPicker, emoji)} onClose={() => setReactPicker(null)} />
+        </div>
+      )}
 
       {imageViewer && (
         <div className="image-viewer-overlay" onClick={() => setImageViewer(null)}>

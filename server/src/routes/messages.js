@@ -23,9 +23,21 @@ router.get('/:channelId', (req, res) => {
     }
   }
 
+  const msgIds = messages.map(m => m.id)
+  const reactionMap = {}
+  if (msgIds.length > 0) {
+    const placeholders = msgIds.map(() => '?').join(',')
+    const reactionRows = db.prepare(`SELECT message_id, emoji, GROUP_CONCAT(nickname) as nicknames, COUNT(*) as count FROM reactions WHERE message_id IN (${placeholders}) GROUP BY message_id, emoji`).all(...msgIds)
+    for (const r of reactionRows) {
+      if (!reactionMap[r.message_id]) reactionMap[r.message_id] = []
+      reactionMap[r.message_id].push({ emoji: r.emoji, count: r.count, nicknames: r.nicknames.split(',') })
+    }
+  }
+
   const result = messages.map(m => ({
     ...m,
     reply_to: m.reply_to ? (replies[m.reply_to] || null) : null,
+    reactions: reactionMap[m.id] || [],
   }))
 
   res.json(result)

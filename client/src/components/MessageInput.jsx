@@ -13,6 +13,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   const inputRef = useRef(null)
   const fileInputRef = useRef(null)
   const pickerRef = useRef(null)
+  const btnRef = useRef(null)
   const typingTimeout = useRef(null)
 
   const emitTyping = useCallback(() => {
@@ -135,7 +136,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   useEffect(() => {
     if (!activePicker) return
     function handleClick(e) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target) && btnRef.current && !btnRef.current.contains(e.target)) {
         setActivePicker(null)
       }
     }
@@ -194,7 +195,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
           disabled={uploading}
           autoFocus
         />
-        <div className="input-actions-right">
+        <div className="input-actions-right" ref={btnRef}>
           <button
             type="button"
             className={`picker-btn gif-text-btn ${activePicker === 'gif' ? 'active' : ''}`}

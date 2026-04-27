@@ -636,6 +636,51 @@ body {
   color: var(--text-primary);
 }
 
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.reaction-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  background: var(--bg-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.1s;
+}
+
+.reaction-chip:hover {
+  border-color: var(--accent);
+}
+
+.reaction-chip.reacted {
+  background: var(--accent-glow, rgba(88,101,242,0.15));
+  border-color: var(--accent);
+}
+
+.reaction-emoji {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.reaction-count {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.reaction-picker-fixed {
+  position: fixed;
+  z-index: 100;
+}
+
 .message-reply-ref {
   display: flex;
   align-items: center;
