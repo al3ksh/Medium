@@ -3,6 +3,7 @@ import { Menu, X, Paperclip, Reply } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar, useAuth } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
+import { renderMarkdown } from '../utils/markdown.jsx'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
 
@@ -26,6 +27,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [imageViewer, setImageViewer] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [typingUsers, setTypingUsers] = useState([])
   const bottomRef = useRef(null)
   const prevMsgCount = useRef(0)
   const token = localStorage.getItem('token')
@@ -56,9 +58,16 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
     socket.on('message:new', onNewMessage)
     socket.on('message:deleted', onDeleted)
 
+    socket.on('typing:update', ({ channelId, typers }) => {
+      if (channelId === channel.id) {
+        setTypingUsers(typers.filter(n => n !== nickname))
+      }
+    })
+
     return () => {
       socket.off('message:new', onNewMessage)
       socket.off('message:deleted', onDeleted)
+      socket.off('typing:update')
     }
   }, [channel.id])
 
@@ -99,7 +108,8 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   }
 
   function renderContent(text) {
-    const parts = text.split(/(@\w[\w\s]*?)(?=\s|$|[^\w])/g)
+    const mentionRegex = /(@\w[\w\s]*?)(?=\s|$|[^\w])/g
+    const parts = text.split(mentionRegex)
     return parts.map((part, i) => {
       if (part.startsWith('@')) {
         const name = part.slice(1).trim()
@@ -111,7 +121,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
           return <span key={i} className="mention" style={{ color: getColor(name) }} onClick={(e) => { e.stopPropagation(); onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 }) }}>{part}</span>
         }
       }
-      return part
+      return <span key={i}>{renderMarkdown(part)}</span>
     })
   }
 
@@ -198,7 +208,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                     </span>
                   </div>
                 )}
-                {msg.content && !isGifUrl(msg.content) && <p className="message-text">{renderContent(msg.content)}</p>}
+                {msg.content && !isGifUrl(msg.content) && <div className="message-text">{renderContent(msg.content)}</div>}
                 {msg.content && isGifUrl(msg.content) && (
                   <div className="message-gif-container">
                     <img src={msg.content.trim()} alt="GIF" className="message-gif" loading="lazy" onClick={() => setImageViewer(msg.content.trim())} />
@@ -221,7 +231,28 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         <div ref={bottomRef} />
       </div>
 
-      <MessageInput onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} users={users} nickname={nickname} />
+      {typingUsers.length > 0 && (
+        <div className="typing-indicator">
+          <div className="typing-dots">
+            <span /><span /><span />
+          </div>
+          <div className="typing-users">
+            {typingUsers.map((name) => (
+              <div key={name} className="typing-user">
+                <div className="typing-avatar" style={getAvatar(name) ? {} : { background: getColor(name) }}>
+                  {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
+                </div>
+                <span>{name}</span>
+              </div>
+            ))}
+          </div>
+          <span className="typing-text">
+            {typingUsers.length === 1 ? 'is' : 'are'} typing...
+          </span>
+        </div>
+      )}
+
+      <MessageInput onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} users={users} nickname={nickname} channelId={channel.id} socket={socket} />
 
       {imageViewer && (
         <div className="image-viewer-overlay" onClick={() => setImageViewer(null)}>

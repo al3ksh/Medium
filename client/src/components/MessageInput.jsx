@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Paperclip, SendHorizonal, X, Reply, Smile } from 'lucide-react'
 import EmojiPicker from './EmojiPicker'
 import GifPicker from './GifPicker'
 
-export default function MessageInput({ onSend, replyTo, onCancelReply, users, nickname }) {
+export default function MessageInput({ onSend, replyTo, onCancelReply, users, nickname, channelId, socket }) {
   const [text, setText] = useState('')
   const [file, setFile] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -13,6 +13,16 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   const inputRef = useRef(null)
   const fileInputRef = useRef(null)
   const pickerRef = useRef(null)
+  const typingTimeout = useRef(null)
+
+  const emitTyping = useCallback(() => {
+    if (!socket || !channelId) return
+    socket.emit('typing:start', channelId)
+    clearTimeout(typingTimeout.current)
+    typingTimeout.current = setTimeout(() => {
+      socket.emit('typing:stop', channelId)
+    }, 4000)
+  }, [socket, channelId])
 
   const mentionUsers = mentionQuery !== null
     ? (() => {
@@ -50,6 +60,8 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
 
     onSend(text.trim(), attachmentData)
     setText('')
+    clearTimeout(typingTimeout.current)
+    socket?.emit('typing:stop', channelId)
     inputRef.current?.focus()
   }
 
@@ -57,6 +69,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     const val = e.target.value
     const pos = e.target.selectionStart
     setText(val)
+    emitTyping()
 
     const before = val.slice(0, pos)
     const atIdx = before.lastIndexOf('@')

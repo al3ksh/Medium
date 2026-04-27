@@ -1,5 +1,7 @@
 const { db } = require('../db')
 
+const typingUsers = new Map()
+
 function registerChatHandlers(io, socket) {
   socket.on('channel:join', (channelId, callback) => {
     const channel = db.prepare('SELECT id, type, locked FROM channels WHERE id = ?').get(channelId)
@@ -61,6 +63,16 @@ function registerChatHandlers(io, socket) {
     }
 
     io.to(`text:${channelId}`).emit('message:new', message)
+
+    const channelTyping = typingUsers.get(channelId)
+    if (channelTyping) {
+      channelTyping.delete(socket.user.nickname)
+      if (channelTyping.size === 0) {
+        typingUsers.delete(channelId)
+      }
+      const typers = Array.from(channelTyping.keys())
+      io.to(`text:${channelId}`).emit('typing:update', { channelId, typers })
+    }
   })
 
   socket.on('message:delete', (messageId) => {
@@ -72,6 +84,38 @@ function registerChatHandlers(io, socket) {
 
     db.prepare('DELETE FROM messages WHERE id = ?').run(messageId)
     io.to(`text:${msg.channel_id}`).emit('message:deleted', messageId)
+  })
+
+  socket.on('typing:start', (channelId) => {
+    if (!channelId) return
+    if (!typingUsers.has(channelId)) typingUsers.set(channelId, new Map())
+    const channelTyping = typingUsers.get(channelId)
+    channelTyping.set(socket.user.nickname, Date.now())
+
+    const typers = Array.from(channelTyping.keys())
+    socket.to(`text:${channelId}`).emit('typing:update', { channelId, typers })
+
+    setTimeout(() => {
+      const ch = typingUsers.get(channelId)
+      if (!ch) return
+      const last = ch.get(socket.user.nickname)
+      if (last && Date.now() - last >= 5000) {
+        ch.delete(socket.user.nickname)
+        if (ch.size === 0) typingUsers.delete(channelId)
+        const updated = Array.from(ch.keys())
+        io.to(`text:${channelId}`).emit('typing:update', { channelId, typers: updated })
+      }
+    }, 5000)
+  })
+
+  socket.on('typing:stop', (channelId) => {
+    if (!channelId) return
+    const channelTyping = typingUsers.get(channelId)
+    if (!channelTyping) return
+    channelTyping.delete(socket.user.nickname)
+    if (channelTyping.size === 0) typingUsers.delete(channelId)
+    const typers = Array.from(channelTyping.keys())
+    socket.to(`text:${channelId}`).emit('typing:update', { channelId, typers })
   })
 }
 

@@ -72,15 +72,15 @@ export default function ChannelContextMenu({ channel, x, y, onOpen, onJoinVoice,
             />
           </form>
         ) : (
-          <button className="context-item" onClick={() => setEditing(true)}>
+          <button className={`context-item${channel.locked ? ' disabled' : ''}`} onClick={channel.locked ? undefined : () => setEditing(true)}>
             <Pencil size={14} /> Edit Channel
           </button>
         )}
-        <button className="context-item" onClick={() => { onCreate(); onClose() }}>
+        <button className={`context-item${channel.locked ? ' disabled' : ''}`} onClick={channel.locked ? undefined : () => { onCreate(); onClose() }}>
           <Plus size={14} /> Create Channel
         </button>
         <div className="context-sep" />
-        <button className="context-item danger" onClick={() => { onDelete(channel); onClose() }}>
+        <button className={`context-item danger${channel.locked ? ' disabled' : ''}`} onClick={channel.locked ? undefined : () => { onDelete(channel); onClose() }}>
           <Trash2 size={14} /> Delete Channel
         </button>
       </div>
