@@ -53,44 +53,55 @@ export default function AuthGate({ onLogin }) {
 
   return (
     <div className="auth-gate">
-      <div className="auth-card">
-        <h1 className="auth-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
-          <img src="/logo.png" alt="Medium" style={{ height: '48px', objectFit: 'contain' }} />
-        </h1>
-        {step === 'passphrase' ? (
-          <form onSubmit={handlePassphrase}>
-            <p className="auth-subtitle">Enter the passphrase to join</p>
-            <input
-              type="password"
-              placeholder="Passphrase"
-              value={passphrase}
-              onChange={(e) => setPassphrase(e.target.value)}
-              autoFocus
-              disabled={loading}
-            />
-            <button type="submit" disabled={loading || !passphrase}>
-              {loading ? '...' : 'Continue'}
-            </button>
-            {error && <p className="auth-error">{error}</p>}
-          </form>
-        ) : (
-          <form onSubmit={handleNickname}>
-            <p className="auth-subtitle">Pick your nickname</p>
-            <input
-              type="text"
-              placeholder="Nickname"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              autoFocus
-              maxLength={20}
-              disabled={loading}
-            />
-            <button type="submit" disabled={loading || nickname.length < 2}>
-              {loading ? '...' : 'Join'}
-            </button>
-            {error && <p className="auth-error">{error}</p>}
-          </form>
-        )}
+      <div className="auth-left">
+        <div className="auth-glow" />
+        <div className="auth-left-logo">
+          <img src="/logo.png" alt="Medium" />
+        </div>
+        <div className="auth-left-text">
+          <h1>Medium</h1>
+          <p>Your private space to talk.</p>
+        </div>
+      </div>
+      <div className="auth-right">
+        <div className="auth-card">
+          {step === 'passphrase' ? (
+            <form onSubmit={handlePassphrase}>
+              <h2>Welcome back</h2>
+              <p className="auth-subtitle">Enter the passphrase to join</p>
+              <input
+                type="password"
+                placeholder="Passphrase"
+                value={passphrase}
+                onChange={(e) => setPassphrase(e.target.value)}
+                autoFocus
+                disabled={loading}
+              />
+              <button type="submit" disabled={loading || !passphrase}>
+                {loading ? '...' : 'Continue'}
+              </button>
+              {error && <p className="auth-error">{error}</p>}
+            </form>
+          ) : (
+            <form onSubmit={handleNickname}>
+              <h2>Pick your nickname</h2>
+              <p className="auth-subtitle">Choose how others will see you</p>
+              <input
+                type="text"
+                placeholder="Nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                autoFocus
+                maxLength={20}
+                disabled={loading}
+              />
+              <button type="submit" disabled={loading || nickname.length < 2}>
+                {loading ? '...' : 'Join'}
+              </button>
+              {error && <p className="auth-error">{error}</p>}
+            </form>
+          )}
+        </div>
       </div>
     </div>
   )
