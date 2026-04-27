@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, Paperclip, Reply } from 'lucide-react'
+import { Menu, X, Paperclip, Reply, Pencil } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar, useAuth } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import { renderMarkdown } from '../utils/markdown.jsx'
+import { showToast } from './ToastContainer'
+import { playNotifSound } from '../utils/notif'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
 
@@ -28,6 +30,8 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [replyTo, setReplyTo] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [typingUsers, setTypingUsers] = useState([])
+  const [editingId, setEditingId] = useState(null)
+  const [editText, setEditText] = useState('')
   const bottomRef = useRef(null)
   const prevMsgCount = useRef(0)
   const token = localStorage.getItem('token')
@@ -49,6 +53,15 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       if (msg.channel_id === channel.id) {
         setMessages((prev) => [...prev, msg])
       }
+      if (msg.nickname !== nickname && msg.content) {
+        const isEveryone = msg.content.includes('@everyone') || msg.content.includes('@here')
+        const isMentioned = msg.content.toLowerCase().includes(`@${nickname.toLowerCase()}`)
+        if (isEveryone || isMentioned) {
+          playNotifSound()
+          const label = isEveryone ? (msg.content.includes('@everyone') ? '@everyone' : '@here') : `@${nickname}`
+          showToast(`${msg.nickname} mentioned you (${label}) in #${channel.name}`)
+        }
+      }
     }
 
     function onDeleted(id) {
@@ -64,10 +77,15 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       }
     })
 
+    socket.on('message:edited', ({ id, content }) => {
+      setMessages((prev) => prev.map((m) => m.id === id ? { ...m, content, edited: true } : m))
+    })
+
     return () => {
       socket.off('message:new', onNewMessage)
       socket.off('message:deleted', onDeleted)
       socket.off('typing:update')
+      socket.off('message:edited')
     }
   }, [channel.id])
 
@@ -81,6 +99,19 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
     }
     prevMsgCount.current = messages.length
   }, [messages])
+
+  function startEdit(msg) {
+    if (msg.user_id && msg.user_id !== myUserId) return
+    setEditingId(msg.id)
+    setEditText(msg.content || '')
+  }
+
+  function submitEdit() {
+    if (!editText.trim()) return
+    socket.emit('message:edit', editingId, editText.trim())
+    setEditingId(null)
+    setEditText('')
+  }
 
   function handleSend(content, attachmentData) {
     socket.emit('message:send', {
@@ -162,8 +193,10 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         ) : (
           messages.map((msg) => {
             const isImpersonated = msg.nickname === nickname && msg.user_id && msg.user_id !== myUserId
+            const isOwn = msg.user_id === myUserId
+            const isEditing = editingId === msg.id
             return (
-            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}`} onContextMenu={(e) => { e.preventDefault(); setReplyTo(msg) }}>
+            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}`} onContextMenu={(e) => { e.preventDefault(); setReplyTo(msg) }} onDoubleClick={() => startEdit(msg)}>
               <div
                 className="message-avatar clickable"
                 style={getAvatar(msg.nickname) ? {} : { background: isImpersonated ? hashColor(msg.user_id) : getColor(msg.nickname) }}
@@ -182,17 +215,40 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                   >
                     {msg.nickname}
                   </span>
-                  <span className="message-time">{formatTime(msg.created_at)}</span>
+                  <span className="message-time">{formatTime(msg.created_at)}{msg.edited ? ' (edited)' : ''}</span>
                   <div className="message-actions">
                     <button className="message-action" onClick={() => setReplyTo(msg)} title="Reply">
                       <Reply size={14} />
                     </button>
-                    <button className="message-action" onClick={(e) => handleDeleteMessage(msg.id, e)} title="Delete (hold Shift to skip confirmation)">
-                      <X size={14} />
-                    </button>
+                    {isOwn && !isEditing && (
+                      <button className="message-action" onClick={() => startEdit(msg)} title="Edit">
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    {isOwn && (
+                      <button className="message-action" onClick={(e) => handleDeleteMessage(msg.id, e)} title="Delete (hold Shift to skip confirmation)">
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
-                {msg.reply_to && (
+                {isEditing ? (
+                  <div className="message-edit-container">
+                    <input
+                      className="message-edit-input"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitEdit() }
+                        if (e.key === 'Escape') { setEditingId(null); setEditText('') }
+                      }}
+                      autoFocus
+                    />
+                    <span className="message-edit-hint">escape to cancel, enter to save</span>
+                  </div>
+                ) : (
+                  <>
+                    {msg.reply_to && (
                   <div className="message-reply-ref" onClick={() => {
                     const el = document.getElementById(`msg-${msg.reply_to.id}`)
                     el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -223,6 +279,8 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                   <a href={msg.attachment} target="_blank" rel="noreferrer" className="message-file">
                     <Paperclip size={14} /> {msg.attachment_name || 'File'}
                   </a>
+                )}
+                  </>
                 )}
               </div>
             </div>

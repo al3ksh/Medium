@@ -86,6 +86,18 @@ function registerChatHandlers(io, socket) {
     io.to(`text:${msg.channel_id}`).emit('message:deleted', messageId)
   })
 
+  socket.on('message:edit', (messageId, newContent) => {
+    if (!newContent || newContent.length > 2000) return
+    const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId)
+    if (!msg) return
+
+    const userId = socket.user.userId
+    if (msg.user_id && msg.user_id !== userId) return
+
+    db.prepare('UPDATE messages SET content = ? WHERE id = ?').run(newContent, messageId)
+    io.to(`text:${msg.channel_id}`).emit('message:edited', { id: messageId, content: newContent })
+  })
+
   socket.on('typing:start', (channelId) => {
     if (!channelId) return
     if (!typingUsers.has(channelId)) typingUsers.set(channelId, new Map())

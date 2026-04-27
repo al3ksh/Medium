@@ -6,6 +6,7 @@ import { VoiceProvider } from './contexts/VoiceContext'
 import { nicknameToColor, loadSettings } from './utils'
 import AuthGate from './components/AuthGate'
 import MainLayout from './pages/MainLayout'
+import ToastContainer from './components/ToastContainer'
 
 export default function App() {
   const [auth, setAuth] = useState(() => {
@@ -104,6 +105,7 @@ export default function App() {
       <SocketContext.Provider value={socket}>
         <VoiceProvider>
           <MainLayout />
+          <ToastContainer />
         </VoiceProvider>
       </SocketContext.Provider>
     </AuthContext.Provider>
