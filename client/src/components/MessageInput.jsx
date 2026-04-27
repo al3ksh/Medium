@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
 import { Paperclip, SendHorizonal, X, Reply, Smile, ImageIcon } from 'lucide-react'
 import EmojiPicker from './EmojiPicker'
 import GifPicker from './GifPicker'
@@ -19,6 +19,8 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   const pickerRef = useRef(null)
   const btnRef = useRef(null)
   const typingTimeout = useRef(null)
+  const formRef = useRef(null)
+  const [pickerStyle, setPickerStyle] = useState({})
 
   const emitTyping = useCallback(() => {
     if (!socket || !channelId) return
@@ -203,6 +205,30 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     return () => document.removeEventListener('mousedown', handleClick)
   }, [activePicker])
 
+  // Position picker so it always fits on screen, opens to the left above the input
+  useLayoutEffect(() => {
+    if (!activePicker || !btnRef.current || !formRef.current) return
+    const btn = btnRef.current.getBoundingClientRect()
+    const form = formRef.current.getBoundingClientRect()
+    const pw = 340 // picker width
+    // Right-align with button area
+    let left = btn.right - pw
+    if (left < 8) left = 8
+    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8
+    // Place bottom edge of picker at top edge of form, with small gap
+    const bottom = window.innerHeight - form.top + 6
+    // Compute available height above form (minus some padding)
+    const availableH = form.top - 16
+    const maxH = Math.min(400, availableH)
+    setPickerStyle({
+      position: 'fixed',
+      left,
+      bottom,
+      zIndex: 300,
+      '--picker-max-h': maxH + 'px',
+    })
+  }, [activePicker])
+
   function handleEmojiSelect(emoji) {
     const pos = inputRef.current?.selectionStart ?? text.length
     const newText = text.slice(0, pos) + emoji + text.slice(pos)
@@ -219,7 +245,8 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   }
 
   return (
-    <form className="message-input-form" onSubmit={handleSubmit}>
+    <>
+    <form className="message-input-form" onSubmit={handleSubmit} ref={formRef}>
       {replyTo && (
         <div className="reply-bar">
           <Reply size={14} />
@@ -264,7 +291,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
           <span className="upload-progress-text">{uploadProgress < 100 ? `${uploadProgress}%` : 'Processing...'}</span>
         </div>
       )}
-      <div className="message-input-row" style={{ position: 'relative' }}>
+      <div className="message-input-row">
         <button
           type="button"
           className="attach-btn"
@@ -320,17 +347,18 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
             ))}
           </div>
         )}
-        {activePicker && (
-          <div ref={pickerRef} className="picker-container">
-            {activePicker === 'emoji' && (
-              <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setActivePicker(null)} />
-            )}
-            {activePicker === 'gif' && (
-              <GifPicker onSelect={handleGifSelect} onClose={() => setActivePicker(null)} />
-            )}
-          </div>
-        )}
       </div>
     </form>
+    {activePicker && (
+      <div ref={pickerRef} className="picker-container" style={pickerStyle}>
+        {activePicker === 'emoji' && (
+          <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setActivePicker(null)} />
+        )}
+        {activePicker === 'gif' && (
+          <GifPicker onSelect={handleGifSelect} onClose={() => setActivePicker(null)} />
+        )}
+      </div>
+    )}
+    </>
   )
 }

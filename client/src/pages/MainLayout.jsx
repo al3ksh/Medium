@@ -394,9 +394,9 @@ export default function MainLayout() {
       )}
       {unlockModal && (
         <div className="modal-overlay" onClick={() => setUnlockModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Locked Channel</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ marginBottom: '0.5rem' }}>Locked Channel</h2>
+            <p className="confirm-modal-message" style={{ marginBottom: '1.25rem' }}>
               #{unlockModal.name} requires a password to access
             </p>
             <input
@@ -408,15 +408,15 @@ export default function MainLayout() {
               onKeyDown={(e) => e.key === 'Enter' && unlockPassword && submitUnlock()}
               style={{
                 width: '100%', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius)',
-                border: '2px solid var(--border-color, rgba(255,255,255,0.06))',
+                border: '1px solid var(--border)',
                 background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-                fontSize: '1rem', outline: 'none', marginBottom: '0.75rem', boxSizing: 'border-box',
+                fontSize: '1rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box',
               }}
             />
             {unlockError && <p style={{ color: 'var(--red)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{unlockError}</p>}
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <button className="btn-cancel" onClick={() => setUnlockModal(null)}>Cancel</button>
-              <button className="btn-confirm" disabled={!unlockPassword} onClick={submitUnlock}>Unlock</button>
+            <div className="confirm-modal-actions">
+              <button className="confirm-btn cancel" onClick={() => setUnlockModal(null)}>Cancel</button>
+              <button className="confirm-btn primary" disabled={!unlockPassword} onClick={submitUnlock}>Unlock</button>
             </div>
           </div>
         </div>

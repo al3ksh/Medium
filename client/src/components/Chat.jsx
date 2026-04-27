@@ -176,9 +176,20 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
 
   function openReactPicker(e, msgId) {
     const rect = e.currentTarget.getBoundingClientRect()
-    const x = Math.min(rect.left, window.innerWidth - 340)
-    const y = rect.bottom + 4 + 300 > window.innerHeight ? rect.top - 4 - 300 : rect.bottom + 4
-    setReactPickerPos({ x, y: Math.max(y, 8) })
+    let x = rect.right - 340
+    if (x < 8) x = 8
+    
+    let posStyle = {}
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    
+    if (spaceBelow >= 400 || spaceBelow > spaceAbove) {
+      posStyle = { left: x, top: rect.bottom + 4 }
+    } else {
+      posStyle = { left: x, bottom: window.innerHeight - rect.top + 4 }
+    }
+    
+    setReactPickerPos(posStyle)
     setReactPicker(reactPicker === msgId ? null : msgId)
   }
 
@@ -313,7 +324,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
             const isOwn = msg.user_id === myUserId
             const isEditing = editingId === msg.id
             return (
-            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}${msg.id === newMsgId ? ' msg-new' : ''}`} onContextMenu={(e) => {
+            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}${msg.id === newMsgId ? ' msg-new' : ''}${reactPicker === msg.id ? ' message-active' : ''}`} onContextMenu={(e) => {
               e.preventDefault()
               setMsgContextMenu({ msg, isOwn, x: e.clientX, y: e.clientY })
             }}>
@@ -485,7 +496,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       }} />
 
       {reactPicker !== null && (
-        <div className="reaction-picker-fixed" style={{ left: reactPickerPos.x, top: reactPickerPos.y }}>
+        <div className="reaction-picker-fixed" style={{ ...reactPickerPos, zIndex: 100 }}>
           <EmojiPicker onSelect={(emoji) => toggleReaction(reactPicker, emoji)} onClose={() => setReactPicker(null)} />
         </div>
       )}

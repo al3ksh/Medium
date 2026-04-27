@@ -648,7 +648,7 @@ body {
   }
 }
 
-.message:hover {
+.message:hover, .message-active {
   background: var(--bg-hover);
 }
 
@@ -708,11 +708,11 @@ body {
   justify-content: center;
 }
 
-.message:hover .message-action {
+.message:hover .message-action, .message-active .message-action {
   display: inline-flex;
 }
 
-.message:hover .message-actions {
+.message:hover .message-actions, .message-active .message-actions {
   display: flex;
 }
 
@@ -1662,6 +1662,7 @@ body {
 
 .picker-btn.active {
   color: var(--accent);
+  background: var(--bg-hover);
 }
 
 .gif-text-btn {
@@ -1674,10 +1675,8 @@ body {
 }
 
 .picker-container {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
-  z-index: 100;
+  position: fixed;
+  z-index: 300;
 }
 
 .picker-panel {
@@ -1685,10 +1684,17 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   width: 340px;
-  max-height: 360px;
+  max-height: var(--picker-max-h, 400px);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: picker-appear 0.15s ease-out;
+  overflow: hidden;
+}
+
+@keyframes picker-appear {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .picker-search {
