@@ -7,6 +7,7 @@ import { renderMarkdown } from '../utils/markdown.jsx'
 import { showToast } from './ToastContainer'
 import { playNotifSound } from '../utils/notif'
 import EmojiPicker from './EmojiPicker'
+import LinkPreview from './LinkPreview'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
 
@@ -33,6 +34,17 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [typingUsers, setTypingUsers] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
+  const [revealedNsfw, setRevealedNsfw] = useState(new Set())
+
+  function toggleNsfw(msgId, e) {
+    e.stopPropagation()
+    setRevealedNsfw(prev => {
+      const next = new Set(prev)
+      if (next.has(msgId)) next.delete(msgId)
+      else next.add(msgId)
+      return next
+    })
+  }
   const [reactPicker, setReactPicker] = useState(null)
   const [reactPickerPos, setReactPickerPos] = useState({ x: 0, y: 0 })
   const bottomRef = useRef(null)
@@ -153,7 +165,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
     }
   }, [reactPicker, editingId])
 
-  function handleSend(content, attachmentData) {
+  function handleSend(content, attachmentData, nsfw) {
     socket.emit('message:send', {
       channelId: channel.id,
       content,
@@ -161,6 +173,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       attachmentName: attachmentData?.originalName || null,
       attachmentType: attachmentData?.mimetype || null,
       replyTo: replyTo?.id || null,
+      nsfw: !!nsfw,
     })
     setReplyTo(null)
   }
@@ -176,6 +189,13 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   function confirmDelete() {
     socket.emit('message:delete', deleteConfirm)
     setDeleteConfirm(null)
+  }
+
+  const URL_REGEX = /https?:\/\/[^\s<>"']+/g
+
+  function extractUrls(text) {
+    if (!text) return []
+    return [...new Set(text.match(URL_REGEX) || [])]
   }
 
   function renderContent(text) {
@@ -308,14 +328,34 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                   </div>
                 )}
                 {msg.content && !isGifUrl(msg.content) && <div className="message-text">{renderContent(msg.content)}</div>}
+                {!isEditing && extractUrls(msg.content).filter(u => !isGifUrl(u)).map((url, ui) => (
+                  <LinkPreview key={ui} url={url} />
+                ))}
                 {msg.content && isGifUrl(msg.content) && (
                   <div className="message-gif-container">
                     <img src={msg.content.trim()} alt="GIF" className="message-gif" loading="lazy" onClick={() => setImageViewer(msg.content.trim())} />
                   </div>
                 )}
                 {msg.attachment && isImage(msg.attachment_type) && (
-                  <div className="message-image-container" onClick={() => setImageViewer(msg.attachment)}>
-                    <img src={msg.attachment} alt="" className="message-image" loading="lazy" />
+                  <div className={`message-image-container${!!msg.nsfw ? ' nsfw-blur-container' : ''}`}>
+                    <img
+                      src={msg.attachment}
+                      alt=""
+                      className={`message-image${!!msg.nsfw && !revealedNsfw.has(msg.id) ? ' nsfw-blur' : ''}`}
+                      loading="lazy"
+                      onClick={() => !msg.nsfw || revealedNsfw.has(msg.id) ? setImageViewer(msg.attachment) : undefined}
+                    />
+                    {!!msg.nsfw && (
+                      <div
+                        className={`nsfw-label${revealedNsfw.has(msg.id) ? ' revealed' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleNsfw(msg.id, e)
+                        }}
+                      >
+                        {revealedNsfw.has(msg.id) ? 'NSFW' : 'NSFW — click to reveal'}
+                      </div>
+                    )}
                   </div>
                 )}
                 {msg.attachment && !isImage(msg.attachment_type) && (

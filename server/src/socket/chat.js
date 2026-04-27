@@ -23,7 +23,7 @@ function registerChatHandlers(io, socket) {
   })
 
   socket.on('message:send', (data) => {
-    const { channelId, content, attachment, attachmentName, attachmentType, replyTo } = data
+    const { channelId, content, attachment, attachmentName, attachmentType, replyTo, nsfw } = data
 
     if (!channelId || (!content && !attachment)) return
     if (content && content.length > 2000) return
@@ -46,8 +46,8 @@ function registerChatHandlers(io, socket) {
     }
 
     db.prepare(
-      'INSERT INTO messages (id, channel_id, nickname, user_id, content, attachment, attachment_name, attachment_type, reply_to, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(id, channelId, socket.user.nickname, userId, content || null, attachment || null, attachmentName || null, attachmentType || null, replyTo || null, now)
+      'INSERT INTO messages (id, channel_id, nickname, user_id, content, attachment, attachment_name, attachment_type, reply_to, nsfw, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, channelId, socket.user.nickname, userId, content || null, attachment || null, attachmentName || null, attachmentType || null, replyTo || null, nsfw ? 1 : 0, now)
 
     const message = {
       id,
@@ -59,6 +59,7 @@ function registerChatHandlers(io, socket) {
       attachment_name: attachmentName || null,
       attachment_type: attachmentType || null,
       reply_to: replyData,
+      nsfw: nsfw ? 1 : 0,
       created_at: now,
     }
 

@@ -69,6 +69,39 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() })
 })
 
+app.get('/api/link-preview', async (req, res) => {
+  const url = req.query.url
+  if (!url) return res.json(null)
+
+  try {
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MediumBot/1.0)' },
+      signal: AbortSignal.timeout(5000),
+    })
+    const html = await r.text()
+
+    const getMeta = (prop) => {
+      const match = html.match(new RegExp(`<meta[^>]*(?:property|name)=["']${prop}["'][^>]*content=["']([^"']*)`, 'i'))
+        || html.match(new RegExp(`<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${prop}["']`, 'i'))
+      return match ? match[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"') : null
+    }
+
+    const title = getMeta('og:title') || html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] || null
+    const desc = getMeta('og:description') || getMeta('description') || null
+    let image = getMeta('og:image') || null
+
+    if (image && !image.startsWith('http')) {
+      try { image = new URL(image, url).href } catch { image = null }
+    }
+
+    const domain = new URL(url).hostname
+
+    res.json({ title, desc, image, domain })
+  } catch {
+    res.json(null)
+  }
+})
+
 migrate()
 startPurgeInterval()
 

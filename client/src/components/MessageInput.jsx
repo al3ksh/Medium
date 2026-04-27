@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Paperclip, SendHorizonal, X, Reply, Smile } from 'lucide-react'
+import { Paperclip, SendHorizonal, X, Reply, Smile, ImageIcon } from 'lucide-react'
 import EmojiPicker from './EmojiPicker'
 import GifPicker from './GifPicker'
 
 export default function MessageInput({ onSend, replyTo, onCancelReply, users, nickname, channelId, socket }) {
   const [text, setText] = useState('')
   const [file, setFile] = useState(null)
+  const [filePreview, setFilePreview] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [mentionQuery, setMentionQuery] = useState(null)
   const [mentionIndex, setMentionIndex] = useState(0)
   const [activePicker, setActivePicker] = useState(null)
+  const [nsfw, setNsfw] = useState(false)
   const inputRef = useRef(null)
   const fileInputRef = useRef(null)
   const pickerRef = useRef(null)
@@ -36,6 +38,24 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
       })()
     : []
 
+  function setFileWithPreview(f) {
+    setFile(f)
+    setNsfw(false)
+    if (f && f.type?.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => setFilePreview(e.target.result)
+      reader.readAsDataURL(f)
+    } else {
+      setFilePreview(null)
+    }
+  }
+
+  function clearFile() {
+    setFile(null)
+    setFilePreview(null)
+    setNsfw(false)
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!text.trim() && !file) return
@@ -56,11 +76,12 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
         }
       } catch {}
       setUploading(false)
-      setFile(null)
+      clearFile()
     }
 
-    onSend(text.trim(), attachmentData)
+    onSend(text.trim(), attachmentData, nsfw)
     setText('')
+    setNsfw(false)
     clearTimeout(typingTimeout.current)
     socket?.emit('typing:stop', channelId)
     inputRef.current?.focus()
@@ -130,8 +151,28 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
 
   function handleFileSelect(e) {
     const f = e.target.files?.[0]
-    if (f) setFile(f)
+    if (f) setFileWithPreview(f)
+    e.target.value = ''
   }
+
+  useEffect(() => {
+    function handlePaste(e) {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.kind === 'file') {
+          const f = item.getAsFile()
+          if (f) {
+            e.preventDefault()
+            setFileWithPreview(f)
+            break
+          }
+        }
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [])
 
   useEffect(() => {
     if (!activePicker) return
@@ -170,8 +211,33 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
       )}
       {file && (
         <div className="file-preview">
-          <span>{file.name}</span>
-          <button type="button" onClick={() => setFile(null)}><X size={14} /></button>
+          <div className="file-preview-info">
+            {filePreview ? (
+              <div className="file-preview-thumb">
+                <img src={filePreview} alt="" />
+              </div>
+            ) : (
+              <div className="file-preview-icon">
+                <ImageIcon size={20} />
+              </div>
+            )}
+            <div className="file-preview-details">
+              <span className="file-preview-name">{file.name}</span>
+              <span className="file-preview-size">{(file.size / 1024).toFixed(0)} KB</span>
+            </div>
+          </div>
+          {file.type?.startsWith('image/') && (
+            <button
+              type="button"
+              className={`nsfw-toggle-pill${nsfw ? ' active' : ''}`}
+              onClick={() => setNsfw(v => !v)}
+              title="Mark as NSFW"
+            >
+              <span className="nsfw-toggle-dot" />
+              <span className="nsfw-toggle-text">NSFW</span>
+            </button>
+          )}
+          <button type="button" className="file-preview-remove" onClick={clearFile}><X size={16} /></button>
         </div>
       )}
       <div className="message-input-row" style={{ position: 'relative' }}>

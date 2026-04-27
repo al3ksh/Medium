@@ -65,6 +65,9 @@ function migrate() {
   if (!msgCols.includes('user_id')) {
     db.exec('ALTER TABLE messages ADD COLUMN user_id TEXT')
   }
+  if (!msgCols.includes('nsfw')) {
+    db.exec('ALTER TABLE messages ADD COLUMN nsfw INTEGER NOT NULL DEFAULT 0')
+  }
 
   const chanCols = db.prepare("PRAGMA table_info(channels)").all().map(c => c.name)
   if (!chanCols.includes('locked')) {
