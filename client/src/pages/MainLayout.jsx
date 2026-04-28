@@ -292,8 +292,33 @@ export default function MainLayout() {
           onUnlockNeeded={handleUnlock}
         />
 
+        {joined && voiceChannel && (
+          <div className="voice-connected-bar">
+            {ping !== null && (
+              <button className="footer-btn" onClick={() => setShowConnectionDetails(true)} title="Connection Details" style={{ width: 'auto', padding: '0 6px', gap: '4px' }}>
+                <div className="signal-bars" data-quality={ping <= 70 ? '4' : ping <= 150 ? '3' : ping <= 300 ? '2' : '1'}>
+                  {[1, 2, 3, 4].map((level) => (
+                    <div key={level} className={`signal-bar ${ping <= (level === 1 ? 300 : level === 2 ? 150 : level === 3 ? 70 : 0) ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
+                  ))}
+                </div>
+              </button>
+            )}
+            <div className="voice-bar-info">
+              <span className="voice-bar-title">Voice Connected</span>
+              <span className="voice-bar-channel">{voiceChannel.name}</span>
+            </div>
+            <button className="footer-btn disconnect" onClick={leaveVoice} title="Disconnect">
+              <PhoneOff size={16} />
+            </button>
+          </div>
+        )}
+
         <div className="sidebar-footer">
-          <div className="user-info" onClick={(e) => setUserPopup({ user: nickname, x: e.clientX + 10, y: e.clientY - 200 })}>
+          <div
+            className="user-info"
+            onClick={(e) => setUserPopup({ user: nickname, x: e.clientX + 10, y: e.clientY - 200 })}
+            onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, nickname) }}
+          >
             <div className="user-avatar" style={getAvatar(nickname) ? {} : { background: avatarColor }}>
               {getAvatar(nickname) ? <img src={getAvatar(nickname)} alt="" /> : nickname[0]?.toUpperCase()}
             </div>
@@ -308,18 +333,6 @@ export default function MainLayout() {
                 <button className={`footer-btn deafen ${isDeafened ? 'active' : ''}`} onClick={toggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'}>
                   <Headphones size={16} />
                 </button>
-                <button className="footer-btn disconnect" onClick={leaveVoice} title="Disconnect Voice">
-                  <PhoneOff size={16} />
-                </button>
-                {ping !== null && (
-                  <button className="footer-btn" onClick={() => setShowConnectionDetails(true)} title="Connection Details" style={{ width: 'auto', padding: '0 6px', gap: '4px' }}>
-                    <div className="signal-bars" data-quality={ping <= 70 ? '4' : ping <= 150 ? '3' : ping <= 300 ? '2' : '1'}>
-                      {[1, 2, 3, 4].map((level) => (
-                        <div key={level} className={`signal-bar ${ping <= (level === 1 ? 300 : level === 2 ? 150 : level === 3 ? 70 : 0) ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
-                      ))}
-                    </div>
-                  </button>
-                )}
               </>
             )}
             <button className="footer-btn" onClick={() => setShowSettings(true)} title="User Settings">

@@ -313,8 +313,7 @@ body {
 }
 
 .sidebar-footer {
-  margin-top: auto;
-  height: 56px;
+  height: 48px;
   padding: 0 0.75rem;
   background: var(--bg-tertiary);
   border-top: 1px solid var(--border);
@@ -322,6 +321,39 @@ body {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+}
+
+.voice-connected-bar {
+  margin-top: auto;
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.voice-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  flex: 1;
+}
+
+.voice-bar-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--green);
+}
+
+.voice-bar-channel {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ========== VOICE USERS IN SIDEBAR ========== */
@@ -416,6 +448,14 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.user-info:hover {
+  background: var(--bg-hover);
 }
 
 .user-avatar {
