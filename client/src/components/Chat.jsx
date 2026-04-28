@@ -81,12 +81,13 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
       }
       if (msg.nickname !== nickname && msg.content) {
         const isEveryone = msg.content.includes('@everyone') || msg.content.includes('@here')
-        const isMentioned = msg.content.toLowerCase().includes(`@${nickname.toLowerCase()}`)
+        const escaped = nickname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const isMentioned = new RegExp(`@${escaped}(?=\\s|$|[^\\w])`, 'i').test(msg.content)
         const notifSetting = getNotifSetting(channel.id)
         const muted = isChannelMuted(channel.id)
 
         if (muted || notifSetting === 'none') return
-        if (notifSetting === 'mentions' && !isMentioned) return
+        if (notifSetting === 'mentions' && !isMentioned && !isEveryone) return
         if (notifSetting === 'default' && !isEveryone && !isMentioned) return
 
         if (isEveryone || isMentioned) {

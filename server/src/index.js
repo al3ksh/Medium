@@ -137,6 +137,10 @@ io.on('connection', (socket) => {
   socket.emit('user:colors', Object.fromEntries(userColors))
   socket.emit('user:profiles', Object.fromEntries(userProfiles))
 
+  const { buildOccupancy, buildVoiceStates } = require('./socket/voice')
+  socket.emit('voice:occupancy', buildOccupancy(io))
+  socket.emit('voice:states', buildVoiceStates(io))
+
   registerChatHandlers(io, socket)
   registerVoiceHandlers(io, socket)
 

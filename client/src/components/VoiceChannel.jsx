@@ -16,7 +16,7 @@ function SignalBars({ ping }) {
 }
 
 export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }) {
-  const { joined, voiceChannel, peers, speaking, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
+  const { joined, voiceChannel, peers, speaking, peerMuted, peerDeafened, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
   const selfColor = useAvatarColor()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
@@ -63,6 +63,8 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                 </div>
                 <div className="voice-user-badge">
                   <span className="voice-name">{p.nickname}</span>
+                  {peerMuted[p.socketId] && !peerDeafened[p.socketId] && <MicOff size={16} className="voice-status-icon-inline" />}
+                  {peerDeafened[p.socketId] && <Headphones size={16} className="voice-status-icon-inline deafened" />}
                 </div>
               </div>
             ))}

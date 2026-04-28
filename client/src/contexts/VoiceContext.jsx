@@ -14,6 +14,9 @@ export function VoiceProvider({ children }) {
   const [joined, setJoined] = useState(false)
   const [peers, setPeers] = useState([])
   const [speaking, setSpeaking] = useState({})
+  const [peerMuted, setPeerMuted] = useState({})
+  const [peerDeafened, setPeerDeafened] = useState({})
+  const [voiceStates, setVoiceStates] = useState({})
   const [occupancy, setOccupancy] = useState({})
   const [isMuted, setIsMuted] = useState(false)
   const [isDeafened, setIsDeafened] = useState(false)
@@ -154,6 +157,14 @@ export function VoiceProvider({ children }) {
 
     function onPeers(list) {
       setPeers(list)
+      const muted = {}
+      const deafened = {}
+      list.forEach(p => {
+        if (p.isMuted) muted[p.socketId] = true
+        if (p.isDeafened) deafened[p.socketId] = true
+      })
+      setPeerMuted(muted)
+      setPeerDeafened(deafened)
       if (list.length > 0) {
         createPeerConnections(list)
       }
@@ -161,6 +172,8 @@ export function VoiceProvider({ children }) {
 
     function onUserJoined(data) {
       setPeers((prev) => [...prev, data])
+      if (data.isMuted) setPeerMuted((prev) => ({ ...prev, [data.socketId]: true }))
+      if (data.isDeafened) setPeerDeafened((prev) => ({ ...prev, [data.socketId]: true }))
     }
 
     function onUserLeft(data) {
@@ -174,6 +187,29 @@ export function VoiceProvider({ children }) {
         delete copy[data.socketId]
         return copy
       })
+      setPeerMuted((prev) => {
+        const copy = { ...prev }
+        delete copy[data.socketId]
+        return copy
+      })
+      setPeerDeafened((prev) => {
+        const copy = { ...prev }
+        delete copy[data.socketId]
+        return copy
+      })
+    }
+
+    function onPeerMute(data) {
+      setPeerMuted((prev) => ({ ...prev, [data.socketId]: data.muted }))
+      if (data.muted) setSpeaking((prev) => ({ ...prev, [data.socketId]: false }))
+    }
+
+    function onPeerDeafen(data) {
+      setPeerDeafened((prev) => ({ ...prev, [data.socketId]: data.deafened }))
+      if (data.deafened) {
+        setSpeaking((prev) => ({ ...prev, [data.socketId]: false }))
+        setPeerMuted((prev) => ({ ...prev, [data.socketId]: true }))
+      }
     }
 
     function onSignal(data) {
@@ -209,7 +245,10 @@ export function VoiceProvider({ children }) {
     socket.on('voice:user-left', onUserLeft)
     socket.on('voice:signal', onSignal)
     socket.on('voice:speaking', onSpeaking)
+    socket.on('voice:mute', onPeerMute)
+    socket.on('voice:deafen', onPeerDeafen)
     socket.on('voice:occupancy', setOccupancy)
+    socket.on('voice:states', setVoiceStates)
     socket.on('voice:pong', (timestamp) => {
       const currentPing = Math.round(Date.now() - timestamp)
       setPing(currentPing)
@@ -226,7 +265,11 @@ export function VoiceProvider({ children }) {
       socket.off('voice:user-left', onUserLeft)
       socket.off('voice:signal', onSignal)
       socket.off('voice:speaking', onSpeaking)
+      socket.off('voice:speaking', onSpeaking)
+      socket.off('voice:mute', onPeerMute)
+      socket.off('voice:deafen', onPeerDeafen)
       socket.off('voice:occupancy', setOccupancy)
+      socket.off('voice:states', setVoiceStates)
       socket.off('voice:pong')
     }
   }, [socket])
@@ -280,29 +323,51 @@ export function VoiceProvider({ children }) {
       const dataArray = new Uint8Array(analyser.frequencyBinCount)
       const BASELINE_FRAMES = 120
 
+      let lastSentSpeaking = null
+      let lastActiveTime = 0
+      const SPEAKING_HOLD_MS = 300
+
       function detectSpeaking() {
         if (!rawStream.current) return
-        analyser.getByteFrequencyData(dataArray)
-        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length
+        const timeData = new Uint8Array(analyser.fftSize)
+        analyser.getByteTimeDomainData(timeData)
+        let sum = 0
+        for (let i = 0; i < timeData.length; i++) {
+          const v = (timeData[i] - 128) / 128
+          sum += v * v
+        }
+        const rms = Math.sqrt(sum / timeData.length)
+        const level = rms * 100
 
-        let isSpeaking
+        let rawSpeaking
         const mode = voiceModeRef.current
         const auto = autoSensitivityRef.current
 
-        if (auto) {
+        if (isMutedRef.current) {
+          rawSpeaking = false
+        } else if (auto) {
           if (baselineSamplesRef.current < BASELINE_FRAMES) {
-            noiseBaselineRef.current = (noiseBaselineRef.current * baselineSamplesRef.current + avg) / (baselineSamplesRef.current + 1)
+            noiseBaselineRef.current = (noiseBaselineRef.current * baselineSamplesRef.current + level) / (baselineSamplesRef.current + 1)
             baselineSamplesRef.current++
-            isSpeaking = avg > 5
+            rawSpeaking = level > 2
           } else {
-            isSpeaking = avg > noiseBaselineRef.current * 1.5 + 5
+            rawSpeaking = level > noiseBaselineRef.current * 1.5 + 3
           }
         } else if (mode === 'studio') {
-          isSpeaking = avg > 3
+          rawSpeaking = level > 2
         } else {
-          isSpeaking = avg > manualThresholdRef.current
+          rawSpeaking = level > (manualThresholdRef.current / 255) * 15
         }
-        socket.emit('voice:speaking', isSpeaking)
+
+        if (rawSpeaking) lastActiveTime = Date.now()
+        const isSpeaking = rawSpeaking || (Date.now() - lastActiveTime < SPEAKING_HOLD_MS)
+
+        setSpeaking(prev => ({ ...prev, [socket?.id]: isSpeaking }))
+
+        if (isSpeaking !== lastSentSpeaking) {
+          lastSentSpeaking = isSpeaking
+          socket.emit('voice:speaking', isSpeaking)
+        }
         rafId.current = requestAnimationFrame(detectSpeaking)
       }
       detectSpeaking()
@@ -420,6 +485,7 @@ export function VoiceProvider({ children }) {
     rawStream.current.getAudioTracks().forEach((t) => { t.enabled = !next })
     isMutedRef.current = next
     setIsMuted(next)
+    socket?.emit('voice:mute', next)
   }
 
   function toggleDeafen() {
@@ -441,6 +507,7 @@ export function VoiceProvider({ children }) {
       isMutedRef.current = false
       setIsMuted(false)
     }
+    socket?.emit('voice:deafen', next)
   }
 
   return (
@@ -449,6 +516,9 @@ export function VoiceProvider({ children }) {
       voiceChannel,
       peers,
       speaking,
+      peerMuted,
+      peerDeafened,
+      voiceStates,
       occupancy,
       joinVoice,
       leaveVoice,

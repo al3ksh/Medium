@@ -11,6 +11,16 @@ function buildOccupancy(io) {
   return occupancy
 }
 
+function buildVoiceStates(io) {
+  const states = {}
+  for (const [, s] of io.sockets.sockets) {
+    if (s.voiceChannel && (s.isMuted || s.isDeafened)) {
+      states[s.user.nickname] = { muted: !!s.isMuted, deafened: !!s.isDeafened }
+    }
+  }
+  return states
+}
+
 function registerVoiceHandlers(io, socket) {
   socket.on('voice:join', (channelId) => {
     const channel = db.prepare('SELECT id, type, locked FROM channels WHERE id = ?').get(channelId)
@@ -23,7 +33,7 @@ function registerVoiceHandlers(io, socket) {
     const peers = []
     for (const [id, s] of io.sockets.sockets) {
       if (id !== socket.id && s.voiceChannel === channelId) {
-        peers.push({ socketId: id, nickname: s.user.nickname })
+        peers.push({ socketId: id, nickname: s.user.nickname, isMuted: !!s.isMuted, isDeafened: !!s.isDeafened })
       }
     }
 
@@ -32,6 +42,8 @@ function registerVoiceHandlers(io, socket) {
     socket.to(`voice:${channelId}`).emit('voice:user-joined', {
       socketId: socket.id,
       nickname: socket.user.nickname,
+      isMuted: !!socket.isMuted,
+      isDeafened: !!socket.isDeafened,
     })
 
     io.emit('voice:occupancy', buildOccupancy(io))
@@ -67,9 +79,31 @@ function registerVoiceHandlers(io, socket) {
     }
   })
 
+  socket.on('voice:mute', (muted) => {
+    socket.isMuted = muted
+    if (socket.voiceChannel) {
+      socket.to(`voice:${socket.voiceChannel}`).emit('voice:mute', {
+        socketId: socket.id,
+        muted,
+      })
+      io.emit('voice:states', buildVoiceStates(io))
+    }
+  })
+
+  socket.on('voice:deafen', (deafened) => {
+    socket.isDeafened = deafened
+    if (socket.voiceChannel) {
+      socket.to(`voice:${socket.voiceChannel}`).emit('voice:deafen', {
+        socketId: socket.id,
+        deafened,
+      })
+      io.emit('voice:states', buildVoiceStates(io))
+    }
+  })
+
   socket.on('voice:ping', (timestamp) => {
     socket.emit('voice:pong', timestamp)
   })
 }
 
-module.exports = { registerVoiceHandlers, buildOccupancy }
+module.exports = { registerVoiceHandlers, buildOccupancy, buildVoiceStates }

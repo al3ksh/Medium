@@ -7,7 +7,7 @@ import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate, unlockedChannels, onUnlockNeeded, unread }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened } = useVoice()
+  const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened, voiceStates, socketId } = useVoice()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
   const token = localStorage.getItem('token')
@@ -113,8 +113,13 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                     </div>
                     <span className="voice-user-name">{name}{name === nickname ? ' (you)' : ''}</span>
                     <div className="voice-user-status-icons">
-                      {name === nickname && isMuted && !isDeafened && <MicOff size={14} className="voice-user-status muted" />}
-                      {name === nickname && isDeafened && <Headphones size={14} className="voice-user-status deafened" />}
+                      {(() => {
+                        const st = name === nickname ? { muted: isMuted, deafened: isDeafened } : voiceStates[name]
+                        return <>
+                          {st?.muted && !st?.deafened && <MicOff size={14} className="voice-user-status muted" />}
+                          {st?.deafened && <Headphones size={14} className="voice-user-status deafened" />}
+                        </>
+                      })()}
                     </div>
                   </div>
                 ))}
