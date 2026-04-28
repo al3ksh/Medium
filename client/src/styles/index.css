@@ -1573,6 +1573,7 @@ body {
 }
 
 .message-input-row {
+  position: relative;
   display: flex;
   gap: 0.5rem;
   background: var(--bg-input);
