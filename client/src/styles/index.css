@@ -520,6 +520,9 @@ body {
 }
 
 .channel-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -681,7 +684,8 @@ body {
 .message {
   display: flex;
   gap: 0.75rem;
-  padding: 0.35rem 0;
+  padding: 0.35rem 0.75rem;
+  margin: 0 -0.75rem;
   border-radius: var(--radius);
 }
 
@@ -750,7 +754,7 @@ body {
 }
 
 .message-action {
-  display: none;
+  display: inline-flex;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -760,16 +764,15 @@ body {
   justify-content: center;
 }
 
-.message:hover .message-action, .message-active .message-action {
-  display: inline-flex;
-}
-
 .message:hover .message-actions, .message-active .message-actions {
-  display: flex;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .message-actions {
-  display: none;
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
   margin-left: auto;
   gap: 2px;
 }
