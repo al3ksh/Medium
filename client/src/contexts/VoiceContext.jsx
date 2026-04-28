@@ -35,9 +35,12 @@ export function VoiceProvider({ children }) {
   const isMutedRef = useRef(false)
   const voiceModeRef = useRef(null)
   const autoSensitivityRef = useRef(false)
-  const manualThresholdRef = useRef(127.5)
+  const manualThresholdRef = useRef(null)
   const noiseBaselineRef = useRef(0)
   const baselineSamplesRef = useRef(0)
+  const gateGainRef = useRef(null)
+  const lastInputDeviceRef = useRef(null)
+  const analyserRef = useRef(null)
 
   useEffect(() => {
     if (!socket || autoRejoined.current) return
@@ -75,7 +78,19 @@ export function VoiceProvider({ children }) {
         const dest = audioContext.current.createMediaStreamDestination()
 
         newSource.connect(inputGain)
-        inputGain.connect(dest)
+        if (gateGainRef.current) {
+          inputGain.connect(gateGainRef.current)
+          gateGainRef.current.connect(dest)
+        } else {
+          inputGain.connect(dest)
+        }
+        if (analyserRef.current) {
+          inputGain.connect(analyserRef.current)
+        }
+
+        if (isMutedRef.current) {
+          stream.getAudioTracks().forEach(t => { t.enabled = false })
+        }
 
         if (rawStream.current) rawStream.current.getTracks().forEach(t => t.stop())
         rawStream.current = stream
@@ -102,7 +117,10 @@ export function VoiceProvider({ children }) {
         baselineSamplesRef.current = 0
       }
       applyOutputDevice()
-      applyInputDevice()
+      if (s.inputDevice !== lastInputDeviceRef.current) {
+        lastInputDeviceRef.current = s.inputDevice
+        applyInputDevice()
+      }
     }
 
     window.addEventListener('settings-updated', handleSettingsUpdated)
@@ -296,11 +314,16 @@ export function VoiceProvider({ children }) {
 
       const analyser = audioContext.current.createAnalyser()
       analyser.fftSize = 256
+      analyserRef.current = analyser
 
       const dest = audioContext.current.createMediaStreamDestination()
+      const gateGain = audioContext.current.createGain()
+      gateGain.gain.value = 1
+      gateGainRef.current = gateGain
 
       source.connect(inputGain)
-      inputGain.connect(dest)
+      inputGain.connect(gateGain)
+      gateGain.connect(dest)
       inputGain.connect(analyser)
 
       localStream.current = dest.stream
@@ -362,25 +385,42 @@ export function VoiceProvider({ children }) {
         const rms = Math.sqrt(sum / timeData.length)
         const level = rms * 100
 
-        let rawSpeaking
-        const mode = voiceModeRef.current
-        const auto = autoSensitivityRef.current
+      let rawSpeaking
+      const mode = voiceModeRef.current
+      const auto = autoSensitivityRef.current
 
-        if (isMutedRef.current) {
-          rawSpeaking = false
-        } else if (auto) {
-          if (baselineSamplesRef.current < BASELINE_FRAMES) {
-            noiseBaselineRef.current = (noiseBaselineRef.current * baselineSamplesRef.current + level) / (baselineSamplesRef.current + 1)
-            baselineSamplesRef.current++
-            rawSpeaking = level > 2
-          } else {
-            rawSpeaking = level > noiseBaselineRef.current * 1.5 + 3
-          }
-        } else if (mode === 'studio') {
+      if (isMutedRef.current) {
+        rawSpeaking = false
+      } else if (mode === 'studio' || !mode) {
+        rawSpeaking = level > 2
+      } else if (auto) {
+        if (baselineSamplesRef.current < BASELINE_FRAMES) {
+          noiseBaselineRef.current = (noiseBaselineRef.current * baselineSamplesRef.current + level) / (baselineSamplesRef.current + 1)
+          baselineSamplesRef.current++
           rawSpeaking = level > 2
         } else {
-          rawSpeaking = level > (manualThresholdRef.current / 255) * 15
+          rawSpeaking = level > noiseBaselineRef.current * 1.5 + 3
         }
+      } else {
+        const threshold = manualThresholdRef.current ?? 128
+        rawSpeaking = level > threshold / 8
+      }
+
+      if (gateGainRef.current && audioContext.current) {
+        const now = audioContext.current.currentTime
+        const rampTime = 0.05
+        if (isMutedRef.current) {
+          gateGainRef.current.gain.linearRampToValueAtTime(0, now + 0.01)
+        } else if (mode === 'studio' || !mode) {
+          gateGainRef.current.gain.linearRampToValueAtTime(1, now + 0.01)
+        } else if (rawSpeaking) {
+          gateGainRef.current.gain.linearRampToValueAtTime(1, now + rampTime)
+        } else if (Date.now() - lastActiveTime < 150) {
+          gateGainRef.current.gain.linearRampToValueAtTime(1, now + 0.01)
+        } else {
+          gateGainRef.current.gain.linearRampToValueAtTime(0, now + rampTime)
+        }
+      }
 
         if (rawSpeaking) lastActiveTime = Date.now()
         const isSpeaking = rawSpeaking || (Date.now() - lastActiveTime < SPEAKING_HOLD_MS)
@@ -522,6 +562,8 @@ export function VoiceProvider({ children }) {
     next ? playMuteSound() : playUnmuteSound()
   }
 
+  const wasMutedBeforeDeafen = useRef(false)
+
   function toggleDeafen() {
     const next = !isDeafened
     setIsDeafened(next)
@@ -529,20 +571,25 @@ export function VoiceProvider({ children }) {
     Object.values(remoteAudioRefs.current).forEach((audio) => {
       if (audio) audio.muted = next
     })
-    if (next && !isMuted) {
-      if (rawStream.current) {
-        rawStream.current.getAudioTracks().forEach((t) => { t.enabled = false })
+    if (next) {
+      wasMutedBeforeDeafen.current = isMuted
+      if (!isMuted) {
+        if (rawStream.current) {
+          rawStream.current.getAudioTracks().forEach((t) => { t.enabled = false })
+        }
+        isMutedRef.current = true
+        setIsMuted(true)
+        localStorage.setItem('voice-muted', 'true')
       }
-      isMutedRef.current = true
-      setIsMuted(true)
-      localStorage.setItem('voice-muted', 'true')
-    } else if (!next && isMuted) {
-      if (rawStream.current) {
-        rawStream.current.getAudioTracks().forEach((t) => { t.enabled = true })
+    } else if (!next) {
+      if (!wasMutedBeforeDeafen.current) {
+        if (rawStream.current) {
+          rawStream.current.getAudioTracks().forEach((t) => { t.enabled = true })
+        }
+        isMutedRef.current = false
+        setIsMuted(false)
+        localStorage.setItem('voice-muted', 'false')
       }
-      isMutedRef.current = false
-      setIsMuted(false)
-      localStorage.setItem('voice-muted', 'false')
     }
     socket?.emit('voice:deafen', next)
     next ? playDeafenSound() : playUndeafenSound()

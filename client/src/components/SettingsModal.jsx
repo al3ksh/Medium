@@ -11,9 +11,10 @@ import CheckboxSwitch from './CheckboxSwitch'
 const MAX_BIO = 190
 
 // Custom tooltip slider mimicking Discord
-function TooltipSlider({ value, min, max, onChange, suffix = '%', disabled = false, trackStyle = {} }) {
+function TooltipSlider({ value, min, max, onChange, suffix = '%', displayValue, disabled = false, trackStyle = {} }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const percent = ((value - min) / (max - min)) * 100;
+  const display = displayValue ? displayValue(value) : `${value}${suffix}`;
   
   return (
     <div 
@@ -38,7 +39,7 @@ function TooltipSlider({ value, min, max, onChange, suffix = '%', disabled = fal
       {showTooltip && (
         <div className="slider-tooltip" style={{ left: `calc(${percent}% + ${10 - percent * 0.2}px)` }}>
           <div className="slider-tooltip-tail"></div>
-          {value}{suffix}
+          {display}
         </div>
       )}
     </div>
@@ -149,7 +150,7 @@ export default function SettingsModal({ onClose }) {
     const next = { ...settings, ...patch }
     setSettings(next)
     saveSettings(next)
-    if ('outputDevice' in patch || 'outputVolume' in patch || 'inputDevice' in patch) {
+    if ('outputDevice' in patch || 'outputVolume' in patch || 'inputDevice' in patch || 'inputVolume' in patch || 'voiceMode' in patch || 'inputSensitivity' in patch || 'autoInputSensitivity' in patch) {
       window.dispatchEvent(new Event('settings-updated'))
     }
   }
@@ -376,6 +377,7 @@ function VoiceTab({ settings, onUpdate, voice, onMicTestChange }) {
   const [isTesting, setIsTesting] = useState(false)
   const audioRefs = useRef(null)
   const wasDeafenedBefore = useRef(false)
+  const wasMutedBefore = useRef(false)
 
   useEffect(() => {
     if (!navigator.mediaDevices) {
@@ -447,13 +449,19 @@ function VoiceTab({ settings, onUpdate, voice, onMicTestChange }) {
 
   function testMic() {
     const willTest = !isTesting
-    if (willTest && voice.joined && !voice.isDeafened) {
-      wasDeafenedBefore.current = false
-      voice.toggleDeafen()
-    } else if (willTest && voice.joined && voice.isDeafened) {
-      wasDeafenedBefore.current = true
-    } else if (!willTest && voice.joined && !wasDeafenedBefore.current) {
-      voice.toggleDeafen()
+    if (willTest && voice.joined) {
+      wasDeafenedBefore.current = voice.isDeafened
+      wasMutedBefore.current = voice.isMuted
+      if (!voice.isDeafened) {
+        voice.toggleDeafen()
+      }
+    } else if (!willTest && voice.joined) {
+      if (!wasDeafenedBefore.current) {
+        voice.toggleDeafen()
+      }
+      if (wasMutedBefore.current && !voice.isMuted) {
+        voice.toggleMute()
+      }
     }
     setIsTesting(willTest)
     onMicTestChange?.(willTest, wasDeafenedBefore.current)
@@ -587,7 +595,8 @@ function VoiceTab({ settings, onUpdate, voice, onMicTestChange }) {
                 max={100} 
                 value={settings.inputSensitivity ?? 50} 
                 onChange={(val) => onUpdate({ inputSensitivity: val })} 
-                suffix="%"
+                suffix="dB"
+                displayValue={(val) => `-${100 - val}`}
                 disabled={settings.autoInputSensitivity ?? false}
               />
             </div>
