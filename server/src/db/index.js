@@ -76,9 +76,8 @@ function migrate() {
 
   db.exec(`
     INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('general', 'general', 'text', 0);
-    INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('voice-1', 'Voice 1', 'voice', 0);
-    INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('voice-2', 'Voice 2', 'voice', 0);
-    INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('voice-3', 'Voice 3', 'voice', 0);
+    INSERT OR IGNORE INTO channels (id, name, type, locked) VALUES ('voice', 'Voice', 'voice', 0);
+    DELETE FROM channels WHERE id IN ('voice-1', 'voice-2', 'voice-3');
   `)
 
   const privPass = process.env.PRIVATE_PASSWORD

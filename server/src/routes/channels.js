@@ -19,7 +19,7 @@ router.post('/unlock', (req, res) => {
 })
 
 router.get('/', (req, res) => {
-  const channels = db.prepare('SELECT * FROM channels ORDER BY name ASC').all()
+  const channels = db.prepare('SELECT * FROM channels ORDER BY locked DESC, type ASC, name ASC').all()
   res.json(channels)
 })
 

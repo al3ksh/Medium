@@ -20,7 +20,7 @@ import ConnectionDetailsModal from '../components/ConnectionDetailsModal'
 export default function MainLayout() {
   const { nickname, logout } = useAuth()
   const socket = useSocket()
-  const { joined, voiceChannel, leaveVoice, joinVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
+  const { joined, voiceChannel, leaveVoice, joinVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume, isMuted, isDeafened, toggleMute, toggleDeafen, ping, occupancy } = useVoice()
   const avatarColor = useAvatarColor()
   const getAvatar = useUserAvatar()
   const [channels, setChannels] = useState([])
@@ -339,9 +339,26 @@ export default function MainLayout() {
           y={contextMenu.y}
           volume={contextMenu.volume ?? getUserVolume(contextMenu.user)}
           isMuted={isUserMuted(contextMenu.user)}
+          voiceChannelOfUser={(() => {
+            for (const [chId, users] of Object.entries(occupancy)) {
+              if (users.includes(contextMenu.user)) {
+                const ch = channels.find(c => c.id === chId)
+                return ch ? { id: chId, name: ch.name } : null
+              }
+            }
+            return null
+          })()}
           onProfile={(user) => setUserPopup({ user, x: contextMenu.x + 10, y: contextMenu.y - 200 })}
           onMuteToggle={handleMuteToggle}
           onVolumeChange={handleVolumeChange}
+          onKickFromVoice={(nickname) => {
+            for (const [chId, users] of Object.entries(occupancy)) {
+              if (users.includes(nickname)) {
+                socket?.emit('voice:kick', { nickname, channelId: chId })
+                break
+              }
+            }
+          }}
           onClose={() => setContextMenu(null)}
         />
       )}
@@ -350,6 +367,7 @@ export default function MainLayout() {
           channel={channelContextMenu.channel}
           x={channelContextMenu.x}
           y={channelContextMenu.y}
+          occupancy={occupancy}
           onOpen={(ch) => { setActiveChannel(ch); setShowMobileSidebar(false) }}
           onJoinVoice={joinVoice}
           onEdit={handleChannelEdit}
@@ -405,7 +423,7 @@ export default function MainLayout() {
               value={unlockPassword}
               onChange={(e) => setUnlockPassword(e.target.value)}
               autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && unlockPassword && submitUnlock()}
+              onKeyDown={(e) => { if (e.key === 'Enter' && unlockPassword) submitUnlock(); if (e.key === 'Escape') setUnlockModal(null) }}
               style={{
                 width: '100%', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius)',
                 border: '1px solid var(--border)',

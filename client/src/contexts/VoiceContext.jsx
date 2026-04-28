@@ -259,6 +259,10 @@ export function VoiceProvider({ children }) {
       })
     })
 
+    socket.on('voice:kicked', () => {
+      cleanupVoice()
+    })
+
     return () => {
       socket.off('voice:peers', onPeers)
       socket.off('voice:user-joined', onUserJoined)
@@ -396,7 +400,7 @@ export function VoiceProvider({ children }) {
     }
   }
 
-  function leaveVoice() {
+  function cleanupVoice() {
     if (rafId.current) {
       cancelAnimationFrame(rafId.current)
       rafId.current = null
@@ -423,12 +427,18 @@ export function VoiceProvider({ children }) {
     setVoiceChannel(null)
     setPeers([])
     setSpeaking({})
+    setPeerMuted({})
+    setPeerDeafened({})
     setIsMuted(false)
     setIsDeafened(false)
     setPing(null)
     setPingHistory([])
     setPacketLoss(0)
     localStorage.removeItem('voice-channel')
+  }
+
+  function leaveVoice() {
+    cleanupVoice()
     socket.emit('voice:leave')
   }
 

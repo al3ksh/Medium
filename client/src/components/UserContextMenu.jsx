@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { User, Volume2, VolumeX } from 'lucide-react'
+import { User, Volume2, VolumeX, PhoneOff } from 'lucide-react'
 
-export default function UserContextMenu({ user, x, y, onProfile, onMuteToggle, onVolumeChange, isMuted, volume, onClose }) {
+export default function UserContextMenu({ user, x, y, onProfile, onMuteToggle, onVolumeChange, isMuted, volume, voiceChannelOfUser, onKickFromVoice, onClose }) {
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -45,6 +45,14 @@ export default function UserContextMenu({ user, x, y, onProfile, onMuteToggle, o
         <button className={`context-item ${isMuted ? 'danger' : ''}`} onClick={() => { onMuteToggle(user); onClose() }}>
             {isMuted ? <><Volume2 size={14} /> Unmute User</> : <><VolumeX size={14} /> Mute User</>}
         </button>
+        {voiceChannelOfUser && (
+          <>
+            <div className="context-sep" />
+            <button className="context-item danger" onClick={() => { onKickFromVoice?.(user); onClose() }}>
+              <PhoneOff size={14} /> Disconnect from Voice
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

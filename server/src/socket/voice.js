@@ -104,6 +104,22 @@ function registerVoiceHandlers(io, socket) {
   socket.on('voice:ping', (timestamp) => {
     socket.emit('voice:pong', timestamp)
   })
+
+  socket.on('voice:kick', ({ nickname, channelId }) => {
+    for (const [id, s] of io.sockets.sockets) {
+      if (s.voiceChannel === channelId && s.user.nickname === nickname) {
+        s.leave(`voice:${channelId}`)
+        s.voiceChannel = null
+        s.isMuted = false
+        s.isDeafened = false
+        s.emit('voice:kicked')
+        socket.to(`voice:${channelId}`).emit('voice:user-left', { socketId: id })
+        io.emit('voice:occupancy', buildOccupancy(io))
+        io.emit('voice:states', buildVoiceStates(io))
+        break
+      }
+    }
+  })
 }
 
 module.exports = { registerVoiceHandlers, buildOccupancy, buildVoiceStates }

@@ -62,6 +62,7 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onBlur={() => { if (!newName) setCreating(false) }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setCreating(false); setNewName('') } }}
           />
         </form>
       )}

@@ -54,7 +54,7 @@ function setNotifSetting(channelId, value) {
   localStorage.setItem(NOTIF_KEY, JSON.stringify(settings))
 }
 
-export default function ChannelContextMenu({ channel, x, y, onOpen, onJoinVoice, onEdit, onCreate, onDelete, onClose }) {
+export default function ChannelContextMenu({ channel, x, y, occupancy, onOpen, onJoinVoice, onEdit, onCreate, onDelete, onClose }) {
   const menuRef = useRef(null)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(channel.name)
@@ -86,6 +86,9 @@ export default function ChannelContextMenu({ channel, x, y, onOpen, onJoinVoice,
   const menuY = Math.min(y, window.innerHeight - 240)
 
   const Icon = channel.type === 'text' ? Hash : Volume2
+  const isDefault = channel.id === 'general' || channel.id === 'voice'
+  const channelUsers = occupancy?.[channel.id] || []
+  const hasUsers = channelUsers.length > 0
 
   function handleEditSubmit(e) {
     e.preventDefault()
@@ -125,7 +128,7 @@ export default function ChannelContextMenu({ channel, x, y, onOpen, onJoinVoice,
             />
           </form>
         ) : (
-          <button className={`context-item${channel.locked ? ' disabled' : ''}`} onClick={channel.locked ? undefined : () => setEditing(true)}>
+          <button className={`context-item${channel.locked || isDefault ? ' disabled' : ''}`} onClick={channel.locked || isDefault ? undefined : () => setEditing(true)}>
             <Pencil size={14} /> Edit Channel
           </button>
         )}
@@ -180,7 +183,7 @@ export default function ChannelContextMenu({ channel, x, y, onOpen, onJoinVoice,
             <div className="context-sep" />
           </>
         )}
-        <button className={`context-item danger${channel.locked ? ' disabled' : ''}`} onClick={channel.locked ? undefined : () => { onDelete(channel); onClose() }}>
+        <button className={`context-item danger${channel.locked || isDefault || (channel.type === 'voice' && hasUsers) ? ' disabled' : ''}`} onClick={channel.locked || isDefault || (channel.type === 'voice' && hasUsers) ? undefined : () => { onDelete(channel); onClose() }}>
           <Trash2 size={14} /> Delete Channel
         </button>
       </div>
