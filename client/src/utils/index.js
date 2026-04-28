@@ -71,7 +71,7 @@ export const THEMES = {
       '--border-color': 'rgba(0,0,0,0.1)',
     }
   },
-  discord: {
+  medium: {
     label: 'thiscord?',
     vars: {
       '--bg-primary': '#313338',

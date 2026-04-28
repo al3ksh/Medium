@@ -2861,7 +2861,7 @@ body {
   margin-bottom: 1.25rem;
 }
 
-.settings-discord-grid {
+.settings-medium-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0 1.5rem;
@@ -2896,13 +2896,13 @@ body {
   cursor: pointer;
 }
 
-.discord-mic-test-row {
+.medium-mic-test-row {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.discord-test-btn {
+.medium-test-btn {
   background: var(--accent);
   color: white;
   border: none;
@@ -2915,11 +2915,11 @@ body {
   white-space: nowrap;
 }
 
-.discord-test-btn:hover {
+.medium-test-btn:hover {
   background: var(--accent-hover);
 }
 
-.discord-meter {
+.medium-meter {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -2927,7 +2927,7 @@ body {
   height: 24px;
 }
 
-.discord-meter-bar {
+.medium-meter-bar {
   flex: 1;
   height: 100%;
   background: var(--bg-active);
@@ -2935,15 +2935,15 @@ body {
   transition: background 0.1s;
 }
 
-.discord-meter-bar.active {
+.medium-meter-bar.active {
   background: var(--green);
 }
 
-.discord-meter-bar.active.yellow {
+.medium-meter-bar.active.yellow {
   background: var(--yellow);
 }
 
-.discord-meter-bar.active.red {
+.medium-meter-bar.active.red {
   background: var(--red);
 }
 
@@ -4181,7 +4181,7 @@ body {
   height: 24px;
 }
 
-.discord-slider {
+.medium-slider {
   -webkit-appearance: none;
   background: transparent;
   width: 100%;
@@ -4193,13 +4193,13 @@ body {
   cursor: pointer;
 }
 
-.discord-slider::-webkit-slider-runnable-track {
+.medium-slider::-webkit-slider-runnable-track {
   height: 8px;
   background: var(--bg-primary); /* Default dark track */
   border-radius: 4px;
 }
 
-.discord-slider::-webkit-slider-thumb {
+.medium-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
   height: 24px;
@@ -4210,16 +4210,16 @@ body {
   margin-top: -8px;
 }
 
-.discord-slider:active::-webkit-slider-thumb {
+.medium-slider:active::-webkit-slider-thumb {
   cursor: grabbing;
 }
 
-.discord-slider.disabled {
+.medium-slider.disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.discord-slider.disabled::-webkit-slider-thumb {
+.medium-slider.disabled::-webkit-slider-thumb {
   cursor: not-allowed;
 }
 
@@ -4331,7 +4331,7 @@ body {
   font-size: 0.85rem;
 }
 
-.discord-switch {
+.medium-switch {
   width: 40px;
   height: 24px;
   background: var(--text-muted);
@@ -4342,11 +4342,11 @@ body {
   flex-shrink: 0;
 }
 
-.discord-switch.checked {
+.medium-switch.checked {
   background: var(--green);
 }
 
-.discord-switch-handle {
+.medium-switch-handle {
   width: 18px;
   height: 18px;
   background: white;
@@ -4360,11 +4360,11 @@ body {
   justify-content: center;
 }
 
-.discord-switch.checked .discord-switch-handle {
+.medium-switch.checked .medium-switch-handle {
   transform: translateX(16px);
 }
 
-.discord-switch-icon {
+.medium-switch-icon {
   color: var(--green);
 }
 
@@ -4390,7 +4390,7 @@ body {
   opacity: 0.5;
 }
 
-.threshold-slider-wrapper .discord-slider::-webkit-slider-runnable-track {
+.threshold-slider-wrapper .medium-slider::-webkit-slider-runnable-track {
   background: transparent; /* Track is handled by threshold-bg */
 }
 .threshold-volume-fill {
@@ -4415,4 +4415,87 @@ body {
   background: var(--bg-input);
   border-radius: 4px;
   z-index: 0;
+}
+
+.legal-link {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.15s;
+}
+.legal-link:hover {
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.cookie-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding: 1rem 2rem;
+  z-index: 999;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: cookie-appear 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cookie-banner-content {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  max-width: 800px;
+  width: 100%;
+}
+
+.cookie-banner p {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cookie-accept-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.cookie-accept-btn:hover {
+  opacity: 0.9;
+}
+
+.cookie-accept-btn:active {
+  transform: scale(0.96);
+}
+
+@keyframes cookie-appear {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.legal-modal h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+.legal-modal p {
+  margin-bottom: 1rem;
 }

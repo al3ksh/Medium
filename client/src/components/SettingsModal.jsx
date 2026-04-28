@@ -6,11 +6,12 @@ import { nicknameToColor, loadSettings, saveSettings, THEMES, THEME_VARS, applyT
 import { X, LogOut, Check, Palette, Camera, Trash2, User, Paintbrush, Volume2, Bell } from 'lucide-react'
 import CropModal from './CropModal'
 import ConfirmModal from './ConfirmModal'
+import LegalModal from './LegalModal'
 import CheckboxSwitch from './CheckboxSwitch'
 
 const MAX_BIO = 190
 
-// Custom tooltip slider mimicking Discord
+// Custom tooltip slider
 function TooltipSlider({ value, min, max, onChange, suffix = '%', displayValue, disabled = false, trackStyle = {} }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const percent = ((value - min) / (max - min)) * 100;
@@ -32,7 +33,7 @@ function TooltipSlider({ value, min, max, onChange, suffix = '%', displayValue, 
         onMouseUp={() => setShowTooltip(false)}
         onTouchStart={() => !disabled && setShowTooltip(true)}
         onTouchEnd={() => setShowTooltip(false)}
-        className={`discord-slider ${disabled ? 'disabled' : ''}`}
+        className={`medium-slider ${disabled ? 'disabled' : ''}`}
         disabled={disabled}
         style={trackStyle}
       />
@@ -46,7 +47,7 @@ function TooltipSlider({ value, min, max, onChange, suffix = '%', displayValue, 
   );
 }
 
-// Discord-like switch
+// Toggle switch component
 function AppearanceTab({ settings, onUpdate }) {
   const currentTheme = settings.theme || 'amoled'
   const customTheme = settings.customTheme || { ...THEMES.amoled.vars }
@@ -134,6 +135,7 @@ export default function SettingsModal({ onClose }) {
   const [tab, setTab] = useState('account')
   const [settings, setSettings] = useState(loadSettings)
   const [logoutConfirm, setLogoutConfirm] = useState(false)
+  const [legalType, setLegalType] = useState(null)
   const micTestActive = useRef(false)
   const wasDeafenedBeforeRef = useRef(false)
   const { closing, animatedClose } = useAnimatedClose(onClose)
@@ -204,10 +206,10 @@ export default function SettingsModal({ onClose }) {
           {tab === 'voice' && <VoiceTab settings={settings} onUpdate={update} voice={voice} onMicTestChange={(v, was) => { micTestActive.current = v; wasDeafenedBeforeRef.current = was }} />}
           {tab === 'notifications' && <NotificationsTab settings={settings} onUpdate={update} />}
           <div className="settings-footer-info">
-            <span>Medium &mdash; Local Network Chat</span>
+            <span>Medium &mdash; Chat</span>
             <div className="settings-footer-links">
-              <span>This app uses local storage to save your preferences (cookies).</span>
-              <span>By using Medium you agree to be respectful to other users on this network.</span>
+              <span>This app uses local storage to save your preferences (<span className="legal-link" onClick={() => setLegalType('privacy')}>Privacy Policy</span>).</span>
+              <span>By using Medium you agree to be respectful to other users on this network (<span className="legal-link" onClick={() => setLegalType('terms')}>Terms of Use</span>).</span>
             </div>
           </div>
         </div>
@@ -221,6 +223,9 @@ export default function SettingsModal({ onClose }) {
           onConfirm={() => { handleClose(); logout() }}
           onCancel={() => setLogoutConfirm(false)}
         />
+      )}
+      {legalType && (
+        <LegalModal type={legalType} onClose={() => setLegalType(null)} />
       )}
     </div>
   )
@@ -537,7 +542,7 @@ function VoiceTab({ settings, onUpdate, voice, onMicTestChange }) {
     <div className="settings-section">
       <h3>Voice & Audio</h3>
 
-      <div className="settings-discord-grid">
+      <div className="settings-medium-grid">
         <div className="settings-group">
           <label>Input Device</label>
           <select
@@ -584,16 +589,16 @@ function VoiceTab({ settings, onUpdate, voice, onMicTestChange }) {
       </div>
 
       <div className="settings-group">
-        <div className="discord-mic-test-row">
-          <button className="discord-test-btn" onClick={testMic}>
+        <div className="medium-mic-test-row">
+          <button className="medium-test-btn" onClick={testMic}>
             {isTesting ? 'Stop testing' : 'Let\'s Check'}
           </button>
-          <div className="discord-meter">
+          <div className="medium-meter">
             {Array.from({ length: 40 }).map((_, i) => {
               const active = isTesting && (testVolume / 100) * 40 > i;
               const colorClass = i > 35 ? 'red' : i > 28 ? 'yellow' : '';
               return (
-                <div key={i} className={`discord-meter-bar ${active ? 'active' : ''} ${active && colorClass ? colorClass : ''}`} />
+                <div key={i} className={`medium-meter-bar ${active ? 'active' : ''} ${active && colorClass ? colorClass : ''}`} />
               )
             })}
           </div>

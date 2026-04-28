@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import LegalModal from './LegalModal'
 
 function MagneticButton({ children, disabled, ...props }) {
   const buttonRef = useRef(null)
@@ -42,6 +43,19 @@ export default function AuthGate({ onLogin }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [ripples, setRipples] = useState([])
+  const [cookieConsent, setCookieConsent] = useState(true)
+  const [legalType, setLegalType] = useState(null)
+
+  useEffect(() => {
+    if (!localStorage.getItem('medium-cookie-consent')) {
+      setCookieConsent(false)
+    }
+  }, [])
+
+  function handleAcceptCookies() {
+    localStorage.setItem('medium-cookie-consent', 'true')
+    setCookieConsent(true)
+  }
 
   function handleLeftClick(e) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -148,6 +162,23 @@ export default function AuthGate({ onLogin }) {
           )}
         </div>
       </div>
+
+      {!cookieConsent && (
+        <div className="cookie-banner">
+          <div className="cookie-banner-content">
+            <p>
+              Medium uses local storage to save your session and preferences. By using Medium, you agree to our{' '}
+              <span className="legal-link" onClick={() => setLegalType('privacy')}>Privacy Policy</span> and{' '}
+              <span className="legal-link" onClick={() => setLegalType('terms')}>Terms of Use</span>.
+            </p>
+            <button className="cookie-accept-btn" onClick={handleAcceptCookies}>Accept</button>
+          </div>
+        </div>
+      )}
+
+      {legalType && (
+        <LegalModal type={legalType} onClose={() => setLegalType(null)} />
+      )}
     </div>
   )
 }
