@@ -241,18 +241,43 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   }
 
   function renderContent(text) {
-    const mentionRegex = /(@\w[\w\s]*?)(?=\s|$|[^\w])/g
-    const parts = text.split(mentionRegex)
-    return parts.map((part, i) => {
-      if (part.startsWith('@')) {
-        const name = part.slice(1).trim()
+    const sortedUsers = [...users].sort((a, b) => b.length - a.length)
+    let result = [text]
+    for (const user of sortedUsers) {
+      const next = []
+      for (const part of result) {
+        if (typeof part !== 'string') { next.push(part); continue }
+        const regex = new RegExp(`@(${user.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?=\\s|$|[^\\w])`, 'g')
+        let lastIndex = 0
+        let match
+        const pieces = []
+        while ((match = regex.exec(part)) !== null) {
+          if (match.index > lastIndex) pieces.push(part.slice(lastIndex, match.index))
+          pieces.push({ mention: user, full: match[0] })
+          lastIndex = regex.lastIndex
+        }
+        if (lastIndex < part.length) pieces.push(part.slice(lastIndex))
+        next.push(...pieces)
+      }
+      result = next
+    }
+    if (sortedUsers.length === 0) {
+      const everyoneRegex = /@(everyone|here)(?=\s|$|[^\w])/g
+      const parts = text.split(everyoneRegex)
+      return parts.map((part, i) => {
+        if (part === 'everyone' || part === 'here') {
+          return <span key={i} className="mention mention-everyone">@{part}</span>
+        }
+        return <span key={i}>{renderMarkdown(part)}</span>
+      })
+    }
+    return result.map((part, i) => {
+      if (typeof part === 'object' && part.mention) {
+        const name = part.mention
         if (name === 'everyone' || name === 'here') {
-          return <span key={i} className="mention mention-everyone">{part}</span>
+          return <span key={i} className="mention mention-everyone">{part.full}</span>
         }
-        const isReal = users.some(u => u === name)
-        if (isReal) {
-          return <span key={i} className="mention" style={{ color: getColor(name) }} onClick={(e) => { e.stopPropagation(); onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 }) }}>{part}</span>
-        }
+        return <span key={i} className="mention" style={{ color: getColor(name) }} onClick={(e) => { e.stopPropagation(); onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 }) }}>{part.full}</span>
       }
       return <span key={i}>{renderMarkdown(part)}</span>
     })
