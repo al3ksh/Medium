@@ -7,7 +7,7 @@ import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate, unlockedChannels, onUnlockNeeded, unread }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened, voiceStates, socketId } = useVoice()
+  const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened, voiceStates, socketId, speaking, peers } = useVoice()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
   const token = localStorage.getItem('token')
@@ -102,14 +102,17 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
             </div>
             {allUsers.length > 0 && !isLocked && (
               <div className="voice-users-list">
-                {allUsers.map((name, i) => (
+                 {allUsers.map((name, i) => {
+                   const sId = name === nickname ? socketId : peers.find(p => p.nickname === name)?.socketId
+                   const isSpeaking = sId ? speaking[sId] : false
+                   return (
                   <div
                     key={`${name}-${i}`}
-                    className="voice-user-item clickable"
+                    className={`voice-user-item clickable${isSpeaking ? ' speaking' : ''}`}
                     onClick={(e) => onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 })}
                     onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, name) }}
                   >
-                    <div className="voice-user-avatar" style={getAvatar(name) ? {} : { background: getColor(name) }}>
+                    <div className={`voice-user-avatar${isSpeaking ? ' speaking' : ''}`} style={getAvatar(name) ? {} : { background: getColor(name) }}>
                       {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
                     </div>
                     <span className="voice-user-name">{name}{name === nickname ? ' (you)' : ''}</span>
@@ -125,7 +128,7 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                       })()}
                     </div>
                   </div>
-                ))}
+                 )})}
               </div>
             )}
           </div>

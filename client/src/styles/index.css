@@ -377,6 +377,10 @@ body {
   object-fit: cover;
 }
 
+.voice-user-avatar.speaking {
+  box-shadow: 0 0 0 2px var(--green), 0 0 8px rgba(35, 165, 89, 0.4);
+}
+
 .voice-user-name {
   flex: 1;
   white-space: nowrap;
