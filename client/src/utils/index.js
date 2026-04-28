@@ -1,3 +1,5 @@
+import { useState, useCallback } from 'react'
+
 const COLORS = [
   '#5865f2', '#57f287', '#fee75c', '#eb459e', '#ed4245',
   '#f47b67', '#e8a23e', '#3ba55c', '#2d7d46', '#0d7dcd',
@@ -123,4 +125,14 @@ export function applyTheme(themeName, customVars) {
   for (const [k, v] of Object.entries(preset?.vars || THEMES.amoled.vars)) {
     root.style.setProperty(k, v)
   }
+}
+
+export function useAnimatedClose(onClose, duration = 150) {
+  const [closing, setClosing] = useState(false)
+  const animatedClose = useCallback(() => {
+    if (closing) return
+    setClosing(true)
+    setTimeout(onClose, duration)
+  }, [onClose, duration, closing])
+  return { closing, animatedClose }
 }

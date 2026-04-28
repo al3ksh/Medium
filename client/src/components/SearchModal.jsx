@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Search } from 'lucide-react'
 import CheckboxSwitch from './CheckboxSwitch'
+import { useAnimatedClose } from '../utils'
 
 export default function SearchModal({ onClose, channels, nickname }) {
   const [query, setQuery] = useState('')
@@ -12,6 +13,7 @@ export default function SearchModal({ onClose, channels, nickname }) {
   const [loading, setLoading] = useState(false)
   const inputRef = useRef(null)
   const debounceRef = useRef(null)
+  const { closing, animatedClose } = useAnimatedClose(onClose)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -56,11 +58,11 @@ export default function SearchModal({ onClose, channels, nickname }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className={`modal-overlay ${closing ? 'closing' : ''}`} onClick={animatedClose}>
       <div className="modal search-modal" onClick={(e) => e.stopPropagation()}>
         <div className="search-modal-header">
           <h2>Search Messages</h2>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={animatedClose}><X size={20} /></button>
         </div>
 
         <div className="search-filters">
@@ -72,7 +74,7 @@ export default function SearchModal({ onClose, channels, nickname }) {
               placeholder="Search messages..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Escape' && onClose()}
+              onKeyDown={(e) => e.key === 'Escape' && animatedClose()}
             />
           </div>
           <div className="search-filter-row">

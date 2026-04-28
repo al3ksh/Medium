@@ -3,7 +3,7 @@ import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones, Search } from 'lucid
 import { useAuth, useAvatarColor, useUserAvatar } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
-import { nicknameToColor } from '../utils'
+import { nicknameToColor, useAnimatedClose } from '../utils'
 import { showToast } from '../components/ToastContainer'
 import { playNotifSound } from '../utils/notif'
 import { isChannelMuted, getNotifSetting } from '../components/ChannelContextMenu'
@@ -439,33 +439,14 @@ export default function MainLayout() {
         />
       )}
       {unlockModal && (
-        <div className="modal-overlay" onClick={() => setUnlockModal(null)}>
-          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ marginBottom: '0.5rem' }}>Locked Channel</h2>
-            <p className="confirm-modal-message" style={{ marginBottom: '1.25rem' }}>
-              #{unlockModal.name} requires a password to access
-            </p>
-            <input
-              type="password"
-              placeholder="Channel password"
-              value={unlockPassword}
-              onChange={(e) => setUnlockPassword(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => { if (e.key === 'Enter' && unlockPassword) submitUnlock(); if (e.key === 'Escape') setUnlockModal(null) }}
-              style={{
-                width: '100%', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)',
-                background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-                fontSize: '1rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box',
-              }}
-            />
-            {unlockError && <p style={{ color: 'var(--red)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{unlockError}</p>}
-            <div className="confirm-modal-actions">
-              <button className="confirm-btn cancel" onClick={() => setUnlockModal(null)}>Cancel</button>
-              <button className="confirm-btn primary" disabled={!unlockPassword} onClick={submitUnlock}>Unlock</button>
-            </div>
-          </div>
-        </div>
+        <UnlockModal
+          channel={unlockModal}
+          password={unlockPassword}
+          setPassword={setUnlockPassword}
+          error={unlockError}
+          onSubmit={submitUnlock}
+          onCancel={() => setUnlockModal(null)}
+        />
       )}
       {showSearch && (
         <SearchModal
@@ -481,6 +462,39 @@ export default function MainLayout() {
         />
       )}
       {showConnectionDetails && <ConnectionDetailsModal onClose={() => setShowConnectionDetails(false)} />}
+    </div>
+  )
+}
+
+function UnlockModal({ channel, password, setPassword, error, onSubmit, onCancel }) {
+  const { closing, animatedClose } = useAnimatedClose(onCancel)
+  return (
+    <div className={`modal-overlay ${closing ? 'closing' : ''}`} onClick={animatedClose}>
+      <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginBottom: '0.5rem' }}>Locked Channel</h2>
+        <p className="confirm-modal-message" style={{ marginBottom: '1.25rem' }}>
+          #{channel.name} requires a password to access
+        </p>
+        <input
+          type="password"
+          placeholder="Channel password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoFocus
+          onKeyDown={(e) => { if (e.key === 'Enter' && password) onSubmit(); if (e.key === 'Escape') animatedClose() }}
+          style={{
+            width: '100%', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius)',
+            border: '1px solid var(--border)',
+            background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+            fontSize: '1rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box',
+          }}
+        />
+        {error && <p style={{ color: 'var(--red)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{error}</p>}
+        <div className="confirm-modal-actions">
+          <button className="confirm-btn cancel" onClick={animatedClose}>Cancel</button>
+          <button className="confirm-btn primary" disabled={!password} onClick={onSubmit}>Unlock</button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { X, Lock } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
+import { useAnimatedClose } from '../utils'
 
 export default function ConnectionDetailsModal({ onClose }) {
   const { pingHistory, ping, packetLoss } = useVoice()
   const [activeTab, setActiveTab] = useState('connection')
+  const { closing, animatedClose } = useAnimatedClose(onClose)
 
   const avgPing = useMemo(() => {
     if (!pingHistory || pingHistory.length === 0) return 0
@@ -36,17 +38,17 @@ export default function ConnectionDetailsModal({ onClose }) {
   const middleY = chartMaxY / 2
 
   useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') onClose() }
+    function onKey(e) { if (e.key === 'Escape') animatedClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [animatedClose])
 
   return (
-    <div className="connection-modal-overlay" onClick={onClose}>
+    <div className={`connection-modal-overlay ${closing ? 'closing' : ''}`} onClick={animatedClose}>
       <div className="connection-modal-content" onClick={e => e.stopPropagation()}>
         <div className="connection-modal-header">
           <h2>Voice Connection Details</h2>
-          <button className="close-btn" onClick={onClose}><X size={20} /></button>
+          <button className="close-btn" onClick={animatedClose}><X size={20} /></button>
         </div>
 
         <div className="connection-tabs">

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth, useUserBio, useUserAvatar, useUserBanner } from '../contexts/AuthContext'
 import { useVoice } from '../contexts/VoiceContext'
 import { useSocket } from '../contexts/SocketContext'
-import { nicknameToColor, loadSettings, saveSettings, THEMES, THEME_VARS, applyTheme } from '../utils'
+import { nicknameToColor, loadSettings, saveSettings, THEMES, THEME_VARS, applyTheme, useAnimatedClose } from '../utils'
 import { X, LogOut, Check, Palette, Camera, Trash2, User, Paintbrush, Volume2, Bell } from 'lucide-react'
 import CropModal from './CropModal'
 import ConfirmModal from './ConfirmModal'
@@ -135,13 +135,14 @@ export default function SettingsModal({ onClose }) {
   const [logoutConfirm, setLogoutConfirm] = useState(false)
   const micTestActive = useRef(false)
   const wasDeafenedBeforeRef = useRef(false)
+  const { closing, animatedClose } = useAnimatedClose(onClose)
 
   function handleClose() {
     if (micTestActive.current && voice.joined && !wasDeafenedBeforeRef.current) {
       voice.toggleDeafen()
     }
     micTestActive.current = false
-    onClose()
+    animatedClose()
   }
 
   function update(patch) {
@@ -165,7 +166,7 @@ export default function SettingsModal({ onClose }) {
   }, [])
 
   return (
-    <div className="settings-overlay" onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}>
+    <div className={`settings-overlay ${closing ? 'closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}>
       <div className="settings-modal">
         <div className="settings-sidebar">
           <div className="settings-sidebar-label">User Settings</div>

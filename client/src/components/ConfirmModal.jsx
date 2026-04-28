@@ -1,21 +1,23 @@
 import { useRef, useEffect, useState } from 'react'
 import { AlertTriangle, HelpCircle } from 'lucide-react'
+import { useAnimatedClose } from '../utils'
 
 export default function ConfirmModal({ title, message, confirmLabel, danger, tip, onConfirm, onCancel }) {
   const confirmRef = useRef(null)
   const [showTip, setShowTip] = useState(false)
+  const { closing, animatedClose } = useAnimatedClose(onCancel)
 
   useEffect(() => {
     confirmRef.current?.focus()
     function handleKey(e) {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape') animatedClose()
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [onCancel])
+  }, [animatedClose])
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className={`modal-overlay ${closing ? 'closing' : ''}`} onClick={animatedClose}>
       <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
         <div className="confirm-modal-header">
           <AlertTriangle size={18} className={danger ? 'text-danger' : ''} />
@@ -35,7 +37,7 @@ export default function ConfirmModal({ title, message, confirmLabel, danger, tip
         </div>
         <p className="confirm-modal-message">{message}</p>
         <div className="confirm-modal-actions">
-          <button className="confirm-btn cancel" onClick={onCancel}>Cancel</button>
+          <button className="confirm-btn cancel" onClick={animatedClose}>Cancel</button>
           <button
             ref={confirmRef}
             className={`confirm-btn ${danger ? 'danger' : 'primary'}`}

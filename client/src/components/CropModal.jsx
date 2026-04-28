@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
 import { X, Check } from 'lucide-react'
+import { useAnimatedClose } from '../utils'
 
 function getCroppedImg(imageSrc, pixelCrop, outputWidth, outputHeight) {
   return new Promise((resolve) => {
@@ -32,6 +33,7 @@ export default function CropModal({ imageSrc, aspect, outputWidth, outputHeight,
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
+  const { closing, animatedClose } = useAnimatedClose(onCancel)
 
   const onCropComplete = useCallback((_, croppedPixels) => {
     setCroppedAreaPixels(croppedPixels)
@@ -44,12 +46,12 @@ export default function CropModal({ imageSrc, aspect, outputWidth, outputHeight,
   }
 
   return (
-    <div className="crop-overlay">
+    <div className={`crop-overlay ${closing ? 'closing' : ''}`}>
       <div className="crop-modal">
         <div className="crop-header">
           <h3>Crop Image</h3>
           <div className="crop-actions">
-            <button className="crop-btn cancel" onClick={onCancel}><X size={18} /></button>
+            <button className="crop-btn cancel" onClick={animatedClose}><X size={18} /></button>
             <button className="crop-btn confirm" onClick={handleConfirm}><Check size={18} /></button>
           </div>
         </div>

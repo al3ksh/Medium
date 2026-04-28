@@ -2264,6 +2264,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: modal-overlay-in 0.15s ease-out;
 }
 
 .connection-modal-content {
@@ -2275,6 +2276,7 @@ body {
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
+  animation: modal-content-in 0.15s ease-out;
 }
 
 .connection-modal-header {
@@ -2530,6 +2532,70 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 200;
+  animation: modal-overlay-in 0.15s ease-out;
+}
+
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes modal-content-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes modal-content-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+
+.modal-closing .settings-overlay,
+.modal-closing.modal-overlay,
+.modal-closing.connection-modal-overlay,
+.modal-closing.crop-overlay {
+  animation: modal-overlay-out 0.15s ease-in forwards;
+}
+
+.modal-closing .settings-modal,
+.modal-closing.confirm-modal,
+.modal-closing.search-modal,
+.modal-closing.connection-modal-content,
+.modal-closing.crop-modal {
+  animation: modal-content-out 0.15s ease-in forwards;
+}
+
+.settings-overlay.closing {
+  animation: modal-overlay-out 0.15s ease-in forwards;
+}
+.settings-overlay.closing > * {
+  animation: modal-content-out 0.15s ease-in forwards;
+}
+
+.modal-overlay.closing {
+  animation: modal-overlay-out 0.15s ease-in forwards;
+}
+.modal-overlay.closing > * {
+  animation: modal-content-out 0.15s ease-in forwards;
+}
+
+.connection-modal-overlay.closing {
+  animation: modal-overlay-out 0.15s ease-in forwards;
+}
+.connection-modal-overlay.closing > * {
+  animation: modal-content-out 0.15s ease-in forwards;
+}
+
+.crop-overlay.closing {
+  animation: modal-overlay-out 0.15s ease-in forwards;
+}
+.crop-overlay.closing > * {
+  animation: modal-content-out 0.15s ease-in forwards;
 }
 
 .settings-modal {
@@ -2540,6 +2606,7 @@ body {
   background: var(--bg-tertiary);
   border-radius: 8px;
   overflow: hidden;
+  animation: modal-content-in 0.15s ease-out;
 }
 
 .settings-sidebar {
@@ -3005,6 +3072,7 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: modal-overlay-in 0.15s ease-out;
 }
 
 .crop-modal {
@@ -3013,6 +3081,7 @@ body {
   width: 500px;
   max-width: 90vw;
   overflow: hidden;
+  animation: modal-content-in 0.15s ease-out;
 }
 
 .crop-header {
@@ -3589,6 +3658,7 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 500;
+  animation: modal-overlay-in 0.15s ease-out;
 }
 
 .search-modal {
@@ -3600,6 +3670,7 @@ body {
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: modal-content-in 0.15s ease-out;
 }
 
 .search-modal-header {
@@ -3783,6 +3854,7 @@ body {
   min-width: 340px;
   max-width: 440px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: modal-content-in 0.15s ease-out;
 }
 
 .confirm-modal-header {
