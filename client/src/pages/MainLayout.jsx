@@ -9,7 +9,7 @@ import { playNotifSound } from '../utils/notif'
 import { isChannelMuted, getNotifSetting } from '../components/ChannelContextMenu'
 import ChannelList from '../components/ChannelList'
 import Chat from '../components/Chat'
-import VoiceChannel from '../components/VoiceChannel'
+import VoiceChannel, { SignalBars } from '../components/VoiceChannel'
 import UserList from '../components/UserList'
 import SettingsModal from '../components/SettingsModal'
 import UserProfilePopup from '../components/UserProfilePopup'
@@ -297,11 +297,7 @@ export default function MainLayout() {
           <div className="voice-connected-bar">
             {ping !== null && (
               <button className="footer-btn" onClick={() => setShowConnectionDetails(true)} title="Connection Details" style={{ width: 'auto', padding: '0 6px', gap: '4px' }}>
-                <div className="signal-bars" data-quality={ping <= 70 ? '4' : ping <= 150 ? '3' : ping <= 300 ? '2' : '1'}>
-                  {[1, 2, 3, 4].map((level) => (
-                    <div key={level} className={`signal-bar ${ping <= (level === 1 ? 300 : level === 2 ? 150 : level === 3 ? 70 : 0) ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
-                  ))}
-                </div>
+                <SignalBars ping={ping} />
               </button>
             )}
             <div className="voice-bar-info">

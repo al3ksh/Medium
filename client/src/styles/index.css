@@ -3552,10 +3552,10 @@ body {
   background: #3ba55c;
 }
 
-.signal-bars[data-quality="1"] .signal-bar.active { background: #ed4245; }
-.signal-bars[data-quality="2"] .signal-bar.active { background: #e8a23e; }
-.signal-bars[data-quality="3"] .signal-bar.active { background: #fee75c; }
 .signal-bars[data-quality="4"] .signal-bar.active { background: #3ba55c; }
+.signal-bars[data-quality="3"] .signal-bar.active { background: #3ba55c; }
+.signal-bars[data-quality="2"] .signal-bar.active { background: #fee75c; }
+.signal-bars[data-quality="1"] .signal-bar.active { background: #ed4245; }
 
 /* ========== CONTEXT MENU ========== */
 

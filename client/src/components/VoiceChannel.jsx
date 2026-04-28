@@ -5,11 +5,13 @@ import { nicknameToColor } from '../utils'
 import { Volume2, Mic, MicOff, Headphones, PhoneOff, Radio } from 'lucide-react'
 import ConnectionDetailsModal from './ConnectionDetailsModal'
 
-function SignalBars({ ping }) {
+export function SignalBars({ ping }) {
+  const quality = ping <= 40 ? '4' : ping <= 70 ? '3' : ping <= 150 ? '2' : '1'
+  const activeBars = ping <= 40 ? 4 : ping <= 70 ? 3 : ping <= 150 ? 2 : 1
   return (
-    <div className="signal-bars" title={`${ping}ms`} data-quality={ping <= 70 ? '4' : ping <= 150 ? '3' : ping <= 300 ? '2' : '1'}>
+    <div className="signal-bars" title={`${ping}ms`} data-quality={quality}>
       {[1, 2, 3, 4].map((level) => (
-        <div key={level} className={`signal-bar ${ping <= (level === 1 ? 300 : level === 2 ? 150 : level === 3 ? 70 : 0) ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
+        <div key={level} className={`signal-bar ${level <= activeBars ? 'active' : ''}`} style={{ height: `${3 + level * 3}px` }} />
       ))}
     </div>
   )
