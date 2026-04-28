@@ -337,6 +337,7 @@ export default function MainLayout() {
           user={contextMenu.user}
           x={contextMenu.x}
           y={contextMenu.y}
+          nickname={nickname}
           volume={contextMenu.volume ?? getUserVolume(contextMenu.user)}
           isMuted={isUserMuted(contextMenu.user)}
           voiceChannelOfUser={(() => {

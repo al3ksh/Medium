@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { User, Volume2, VolumeX, PhoneOff } from 'lucide-react'
 
-export default function UserContextMenu({ user, x, y, onProfile, onMuteToggle, onVolumeChange, isMuted, volume, voiceChannelOfUser, onKickFromVoice, onClose }) {
+export default function UserContextMenu({ user, x, y, nickname, onProfile, onMuteToggle, onVolumeChange, isMuted, volume, voiceChannelOfUser, onKickFromVoice, onClose }) {
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -28,23 +28,27 @@ export default function UserContextMenu({ user, x, y, onProfile, onMuteToggle, o
         <button className="context-item" onClick={() => { onProfile(user); onClose() }}>
             <User size={14} /> Profile
         </button>
-        <div className="context-sep" />
-        <div className="context-item-static">
-          <label className="context-volume-label">
-            User Volume
-          </label>
-          <div className="context-volume-row">
-            <input
-              type="range" min="0" max="200" value={volume}
-              onChange={(e) => onVolumeChange(user, parseInt(e.target.value))}
-            />
-            <span>{volume}%</span>
-          </div>
-        </div>
-        <div className="context-sep" />
-        <button className={`context-item ${isMuted ? 'danger' : ''}`} onClick={() => { onMuteToggle(user); onClose() }}>
-            {isMuted ? <><Volume2 size={14} /> Unmute User</> : <><VolumeX size={14} /> Mute User</>}
-        </button>
+        {user !== nickname && (
+          <>
+            <div className="context-sep" />
+            <div className="context-item-static">
+              <label className="context-volume-label">
+                User Volume
+              </label>
+              <div className="context-volume-row">
+                <input
+                  type="range" min="0" max="200" value={volume}
+                  onChange={(e) => onVolumeChange(user, parseInt(e.target.value))}
+                />
+                <span>{volume}%</span>
+              </div>
+            </div>
+            <div className="context-sep" />
+            <button className={`context-item ${isMuted ? 'danger' : ''}`} onClick={() => { onMuteToggle(user); onClose() }}>
+                {isMuted ? <><Volume2 size={14} /> Unmute User</> : <><VolumeX size={14} /> Mute User</>}
+            </button>
+          </>
+        )}
         {voiceChannelOfUser && (
           <>
             <div className="context-sep" />

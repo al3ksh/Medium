@@ -309,6 +309,22 @@ export function VoiceProvider({ children }) {
       socket.emit('voice:join', channel.id)
       localStorage.setItem('voice-channel', JSON.stringify({ id: channel.id, name: channel.name }))
 
+      const wasMuted = localStorage.getItem('voice-muted') === 'true'
+      const wasDeafened = localStorage.getItem('voice-deafened') === 'true'
+      if (wasMuted || wasDeafened) {
+        if (rawStream.current) rawStream.current.getAudioTracks().forEach((t) => { t.enabled = false })
+        isMutedRef.current = true
+        setIsMuted(true)
+      }
+      if (wasDeafened) {
+        setIsDeafened(true)
+        Object.values(remoteAudioRefs.current).forEach((audio) => { if (audio) audio.muted = true })
+        socket.emit('voice:mute', true)
+        socket.emit('voice:deafen', true)
+      } else if (wasMuted) {
+        socket.emit('voice:mute', true)
+      }
+
       const outputVol = (settings.outputVolume ?? 100) / 100
       const sinkId = settings.outputDevice || ''
       Object.values(remoteAudioRefs.current).forEach((audio) => {
@@ -435,6 +451,8 @@ export function VoiceProvider({ children }) {
     setPingHistory([])
     setPacketLoss(0)
     localStorage.removeItem('voice-channel')
+    localStorage.removeItem('voice-muted')
+    localStorage.removeItem('voice-deafened')
   }
 
   function leaveVoice() {
@@ -495,12 +513,14 @@ export function VoiceProvider({ children }) {
     rawStream.current.getAudioTracks().forEach((t) => { t.enabled = !next })
     isMutedRef.current = next
     setIsMuted(next)
+    localStorage.setItem('voice-muted', String(next))
     socket?.emit('voice:mute', next)
   }
 
   function toggleDeafen() {
     const next = !isDeafened
     setIsDeafened(next)
+    localStorage.setItem('voice-deafened', String(next))
     Object.values(remoteAudioRefs.current).forEach((audio) => {
       if (audio) audio.muted = next
     })
@@ -510,12 +530,14 @@ export function VoiceProvider({ children }) {
       }
       isMutedRef.current = true
       setIsMuted(true)
+      localStorage.setItem('voice-muted', 'true')
     } else if (!next && isMuted) {
       if (rawStream.current) {
         rawStream.current.getAudioTracks().forEach((t) => { t.enabled = true })
       }
       isMutedRef.current = false
       setIsMuted(false)
+      localStorage.setItem('voice-muted', 'false')
     }
     socket?.emit('voice:deafen', next)
   }

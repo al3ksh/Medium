@@ -40,6 +40,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
             <div
               className={`voice-peer clickable speaking-${speaking[socketId] ? 'active' : 'idle'}`}
               onClick={(e) => onUserClick?.({ user: nickname, x: e.clientX + 10, y: e.clientY - 100 })}
+              onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, nickname) }}
             >
               <div className="voice-avatar" style={getAvatar(nickname) ? {} : { background: selfColor }}>
                 {getAvatar(nickname) ? <img src={getAvatar(nickname)} alt="" /> : nickname[0]?.toUpperCase()}

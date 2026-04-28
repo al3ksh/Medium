@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { X, Lock } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
 
@@ -34,6 +34,12 @@ export default function ConnectionDetailsModal({ onClose }) {
 
   // Generate ticks for Y axis
   const middleY = chartMaxY / 2
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   return (
     <div className="connection-modal-overlay" onClick={onClose}>
