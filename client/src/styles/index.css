@@ -2050,6 +2050,50 @@ body {
 
 /* --- Voice idle hero (not connected) --- */
 
+.voice-grid-channel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.voice-peer-observer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.voice-avatar-sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.65rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.voice-avatar-sm img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.voice-name-sm {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .voice-idle-hero {
   flex: 1;
   display: flex;

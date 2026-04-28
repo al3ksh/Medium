@@ -16,12 +16,14 @@ function SignalBars({ ping }) {
 }
 
 export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }) {
-  const { joined, voiceChannel, peers, speaking, peerMuted, peerDeafened, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping } = useVoice()
+  const { joined, voiceChannel, peers, speaking, peerMuted, peerDeafened, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping, occupancy, voiceStates } = useVoice()
   const selfColor = useAvatarColor()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
   const isActive = joined && voiceChannel?.id === channel.id
   const [showDetails, setShowDetails] = useState(false)
+  const channelUsers = occupancy[channel.id] || []
+  const hasUsers = channelUsers.length > 0
 
   return (
     <div className="voice-container">
@@ -78,11 +80,37 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
               <Radio size={40} className="voice-idle-icon" />
             </div>
             <h2 className="voice-idle-title">{channel.name}</h2>
-            <p className="voice-idle-subtitle">No one is in this voice channel yet — be the first to join!</p>
-            <button className="voice-join-hero-btn" onClick={() => joinVoice(channel)}>
-              <Volume2 size={18} />
-              <span>Join Voice</span>
-            </button>
+            {hasUsers ? (
+              <>
+                <div className="voice-grid-channel">
+                  {channelUsers.map((name, i) => {
+                    const st = voiceStates[name]
+                    return (
+                      <div key={`${name}-${i}`} className="voice-peer-observer">
+                        <div className="voice-avatar-sm" style={getAvatar(name) ? {} : { background: getColor(name) }}>
+                          {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
+                        </div>
+                        <span className="voice-name-sm">{name}</span>
+                        {st?.muted && !st?.deafened && <MicOff size={14} className="voice-user-status muted" />}
+                        {st?.deafened && <Headphones size={14} className="voice-user-status deafened" />}
+                      </div>
+                    )
+                  })}
+                </div>
+                <button className="voice-join-hero-btn" onClick={() => joinVoice(channel)}>
+                  <Volume2 size={18} />
+                  <span>Join Voice</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="voice-idle-subtitle">No one is in this voice channel yet — be the first to join!</p>
+                <button className="voice-join-hero-btn" onClick={() => joinVoice(channel)}>
+                  <Volume2 size={18} />
+                  <span>Join Voice</span>
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
