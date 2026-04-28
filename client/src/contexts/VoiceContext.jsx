@@ -28,6 +28,12 @@ export function VoiceProvider({ children }) {
   const pingInterval = useRef(null)
   const autoRejoined = useRef(false)
   const rafId = useRef(null)
+  const isMutedRef = useRef(false)
+  const voiceModeRef = useRef(null)
+  const autoSensitivityRef = useRef(false)
+  const manualThresholdRef = useRef(127.5)
+  const noiseBaselineRef = useRef(0)
+  const baselineSamplesRef = useRef(0)
 
   useEffect(() => {
     if (!socket || autoRejoined.current) return
@@ -83,6 +89,14 @@ export function VoiceProvider({ children }) {
     }
 
     function handleSettingsUpdated() {
+      const s = loadSettings()
+      voiceModeRef.current = s.voiceMode
+      autoSensitivityRef.current = s.autoInputSensitivity ?? false
+      manualThresholdRef.current = (s.inputSensitivity ?? 50) * 2.55
+      if (s.autoInputSensitivity) {
+        noiseBaselineRef.current = 0
+        baselineSamplesRef.current = 0
+      }
       applyOutputDevice()
       applyInputDevice()
     }
@@ -257,11 +271,14 @@ export function VoiceProvider({ children }) {
         }
       })
 
-      const studioMode = settings.voiceMode === 'studio'
-      const autoSensitivity = settings.autoInputSensitivity ?? false
-      const manualThreshold = settings.inputSensitivity ?? 50
+      voiceModeRef.current = settings.voiceMode
+      autoSensitivityRef.current = settings.autoInputSensitivity ?? false
+      manualThresholdRef.current = (settings.inputSensitivity ?? 50) * 2.55
+      noiseBaselineRef.current = 0
+      baselineSamplesRef.current = 0
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      const BASELINE_FRAMES = 120
 
       function detectSpeaking() {
         if (!rawStream.current) return
@@ -269,12 +286,21 @@ export function VoiceProvider({ children }) {
         const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length
 
         let isSpeaking
-        if (studioMode) {
-          isSpeaking = true
-        } else if (autoSensitivity) {
-          isSpeaking = avg > 5
+        const mode = voiceModeRef.current
+        const auto = autoSensitivityRef.current
+
+        if (auto) {
+          if (baselineSamplesRef.current < BASELINE_FRAMES) {
+            noiseBaselineRef.current = (noiseBaselineRef.current * baselineSamplesRef.current + avg) / (baselineSamplesRef.current + 1)
+            baselineSamplesRef.current++
+            isSpeaking = avg > 5
+          } else {
+            isSpeaking = avg > noiseBaselineRef.current * 1.5 + 5
+          }
+        } else if (mode === 'studio') {
+          isSpeaking = avg > 3
         } else {
-          isSpeaking = avg > manualThreshold
+          isSpeaking = avg > manualThresholdRef.current
         }
         socket.emit('voice:speaking', isSpeaking)
         rafId.current = requestAnimationFrame(detectSpeaking)
@@ -392,6 +418,7 @@ export function VoiceProvider({ children }) {
     if (!rawStream.current) return
     const next = !isMuted
     rawStream.current.getAudioTracks().forEach((t) => { t.enabled = !next })
+    isMutedRef.current = next
     setIsMuted(next)
   }
 
@@ -405,11 +432,13 @@ export function VoiceProvider({ children }) {
       if (rawStream.current) {
         rawStream.current.getAudioTracks().forEach((t) => { t.enabled = false })
       }
+      isMutedRef.current = true
       setIsMuted(true)
     } else if (!next && isMuted) {
       if (rawStream.current) {
         rawStream.current.getAudioTracks().forEach((t) => { t.enabled = true })
       }
+      isMutedRef.current = false
       setIsMuted(false)
     }
   }

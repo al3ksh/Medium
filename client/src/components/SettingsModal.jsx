@@ -142,6 +142,16 @@ export default function SettingsModal({ onClose }) {
   const [tab, setTab] = useState('account')
   const [settings, setSettings] = useState(loadSettings)
   const [logoutConfirm, setLogoutConfirm] = useState(false)
+  const micTestActive = useRef(false)
+  const wasDeafenedBeforeRef = useRef(false)
+
+  function handleClose() {
+    if (micTestActive.current && voice.joined && !wasDeafenedBeforeRef.current) {
+      voice.toggleDeafen()
+    }
+    micTestActive.current = false
+    onClose()
+  }
 
   function update(patch) {
     const next = { ...settings, ...patch }
@@ -152,8 +162,19 @@ export default function SettingsModal({ onClose }) {
     }
   }
 
+  const handleCloseRef = useRef(handleClose)
+  handleCloseRef.current = handleClose
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') handleCloseRef.current()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
   return (
-    <div className="settings-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="settings-overlay" onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}>
       <div className="settings-modal">
         <div className="settings-sidebar">
           <div className="settings-sidebar-label">User Settings</div>
@@ -183,11 +204,11 @@ export default function SettingsModal({ onClose }) {
         </div>
 
         <div className="settings-content">
-          <button className="settings-close" onClick={onClose}><X size={20} /></button>
+          <button className="settings-close" onClick={handleClose}><X size={20} /></button>
 
           {tab === 'account' && <AccountTab settings={settings} onUpdate={update} />}
           {tab === 'appearance' && <AppearanceTab settings={settings} onUpdate={update} />}
-          {tab === 'voice' && <VoiceTab settings={settings} onUpdate={update} voice={voice} />}
+          {tab === 'voice' && <VoiceTab settings={settings} onUpdate={update} voice={voice} onMicTestChange={(v, was) => { micTestActive.current = v; wasDeafenedBeforeRef.current = was }} />}
           {tab === 'notifications' && <NotificationsTab settings={settings} onUpdate={update} />}
           <div className="settings-footer-info">
             <span>Medium &mdash; Local Network Chat</span>
@@ -204,7 +225,7 @@ export default function SettingsModal({ onClose }) {
           message="Are you sure you want to log out?"
           confirmLabel="Log Out"
           danger
-          onConfirm={() => { onClose(); logout() }}
+          onConfirm={() => { handleClose(); logout() }}
           onCancel={() => setLogoutConfirm(false)}
         />
       )}
@@ -356,12 +377,13 @@ function AccountTab({ settings, onUpdate }) {
   )
 }
 
-function VoiceTab({ settings, onUpdate, voice }) {
+function VoiceTab({ settings, onUpdate, voice, onMicTestChange }) {
   const [devices, setDevices] = useState([])
   const [outputDevices, setOutputDevices] = useState([])
   const [testVolume, setTestVolume] = useState(0)
   const [isTesting, setIsTesting] = useState(false)
   const audioRefs = useRef(null)
+  const wasDeafenedBefore = useRef(false)
 
   useEffect(() => {
     if (!navigator.mediaDevices) {
@@ -431,21 +453,18 @@ function VoiceTab({ settings, onUpdate, voice }) {
     }
   }, [settings.inputDevice])
 
-  useEffect(() => {
-    const refs = audioRefs.current
-    if (!refs || !refs.audioEl) return
-    refs.audioEl.volume = isTesting ? 1 : 0
-    if (isTesting) {
-      const settings = loadSettings()
-      const sinkId = settings.outputDevice || ''
-      if (sinkId && typeof refs.audioEl.setSinkId === 'function') {
-        refs.audioEl.setSinkId(sinkId).catch(() => {})
-      }
-    }
-  }, [isTesting])
-
   function testMic() {
-    setIsTesting(v => !v)
+    const willTest = !isTesting
+    if (willTest && voice.joined && !voice.isDeafened) {
+      wasDeafenedBefore.current = false
+      voice.toggleDeafen()
+    } else if (willTest && voice.joined && voice.isDeafened) {
+      wasDeafenedBefore.current = true
+    } else if (!willTest && voice.joined && !wasDeafenedBefore.current) {
+      voice.toggleDeafen()
+    }
+    setIsTesting(willTest)
+    onMicTestChange?.(willTest, wasDeafenedBefore.current)
   }
 
   return (
