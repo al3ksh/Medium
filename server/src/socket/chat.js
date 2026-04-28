@@ -66,6 +66,10 @@ function registerChatHandlers(io, socket) {
     io.to(`text:${channelId}`).emit('message:new', message)
     io.except(`text:${channelId}`).emit('message:unread', { channel_id: channelId })
 
+    if (content && content.includes('@')) {
+      io.emit('message:mention', { nickname: socket.user.nickname, content, channel_id: channelId })
+    }
+
     const channelTyping = typingUsers.get(channelId)
     if (channelTyping) {
       channelTyping.delete(socket.user.nickname)

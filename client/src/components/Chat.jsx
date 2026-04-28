@@ -4,13 +4,9 @@ import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar, useAuth } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import { renderMarkdown } from '../utils/markdown.jsx'
-import { showToast } from './ToastContainer'
-import { playNotifSound } from '../utils/notif'
-import EmojiPicker from './EmojiPicker'
-import LinkPreview from './LinkPreview'
-import FadeImage from './FadeImage'
-import MessageContextMenu from './MessageContextMenu'
 import { isChannelMuted, getNotifSetting } from './ChannelContextMenu'
+import FadeImage from './FadeImage'
+import LinkPreview from './LinkPreview'
 import MessageInput from './MessageInput'
 import ConfirmModal from './ConfirmModal'
 
@@ -78,23 +74,6 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         setMessages((prev) => [...prev, msg])
         setNewMsgId(msg.id)
         setTimeout(() => setNewMsgId(null), 300)
-      }
-      if (msg.nickname !== nickname && msg.content) {
-        const isEveryone = msg.content.includes('@everyone') || msg.content.includes('@here')
-        const escaped = nickname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const isMentioned = new RegExp(`@${escaped}(?=\\s|$|[^\\w])`, 'i').test(msg.content)
-        const notifSetting = getNotifSetting(channel.id)
-        const muted = isChannelMuted(channel.id)
-
-        if (muted || notifSetting === 'none') return
-        if (notifSetting === 'mentions' && !isMentioned && !isEveryone) return
-        if (notifSetting === 'default' && !isEveryone && !isMentioned) return
-
-        if (isEveryone || isMentioned) {
-          playNotifSound()
-          const label = isEveryone ? (msg.content.includes('@everyone') ? '@everyone' : '@here') : `@${nickname}`
-          showToast(`${msg.nickname} mentioned you (${label}) in #${channel.name}`)
-        }
       }
     }
 

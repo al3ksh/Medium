@@ -353,6 +353,10 @@ body {
   color: var(--red);
 }
 
+.voice-user-status.local-muted {
+  color: var(--accent);
+}
+
 .voice-user-avatar {
   width: 22px;
   height: 22px;

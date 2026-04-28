@@ -4,6 +4,9 @@ import { useAuth, useAvatarColor, useUserAvatar } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
 import { nicknameToColor } from '../utils'
+import { showToast } from '../components/ToastContainer'
+import { playNotifSound } from '../utils/notif'
+import { isChannelMuted, getNotifSetting } from '../components/ChannelContextMenu'
 import ChannelList from '../components/ChannelList'
 import Chat from '../components/Chat'
 import VoiceChannel from '../components/VoiceChannel'
@@ -45,6 +48,9 @@ export default function MainLayout() {
   const [createModal, setCreateModal] = useState(null)
   const [showSearch, setShowSearch] = useState(false)
   const activeChannelRef = useRef(null)
+  const channelsRef = useRef(channels)
+
+  useEffect(() => { channelsRef.current = channels }, [channels])
   const [unlockedChannels, setUnlockedChannels] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('unlocked-channels') || '[]')) } catch { return new Set() }
   })
@@ -101,12 +107,33 @@ export default function MainLayout() {
       }
     })
 
+    socket.on('message:mention', (msg) => {
+      const ch = channelsRef.current?.find(c => c.id === msg.channel_id)
+      if (!ch) return
+      const isEveryone = msg.content.includes('@everyone') || msg.content.includes('@here')
+      const escaped = nickname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const isMentioned = new RegExp(`@${escaped}(?=\\s|$|[^\\w])`, 'i').test(msg.content)
+      const notifSetting = getNotifSetting(ch.id)
+      const muted = isChannelMuted(ch.id)
+
+      if (muted || notifSetting === 'none') return
+      if (notifSetting === 'mentions' && !isMentioned && !isEveryone) return
+      if (notifSetting === 'default' && !isEveryone && !isMentioned) return
+
+      if (isEveryone || isMentioned) {
+        playNotifSound()
+        const label = isEveryone ? (msg.content.includes('@everyone') ? '@everyone' : '@here') : `@${nickname}`
+        showToast(`${msg.nickname} mentioned you (${label}) in #${ch.name}`)
+      }
+    })
+
     return () => {
       socket.off('channel:created')
       socket.off('channel:deleted')
       socket.off('channel:renamed')
       socket.off('users:update')
       socket.off('message:unread')
+      socket.off('message:mention')
     }
   }, [])
 

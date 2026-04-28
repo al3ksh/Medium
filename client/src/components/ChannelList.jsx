@@ -116,8 +116,10 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                     <div className="voice-user-status-icons">
                       {(() => {
                         const st = name === nickname ? { muted: isMuted, deafened: isDeafened } : voiceStates[name]
+                        const locallyMuted = name !== nickname && localStorage.getItem(`user-muted:${name}`) === 'true'
                         return <>
-                          {st?.muted && !st?.deafened && <MicOff size={14} className="voice-user-status muted" />}
+                          {locallyMuted && <MicOff size={14} className="voice-user-status local-muted" />}
+                          {!locallyMuted && st?.muted && !st?.deafened && <MicOff size={14} className="voice-user-status muted" />}
                           {st?.deafened && <Headphones size={14} className="voice-user-status deafened" />}
                         </>
                       })()}
