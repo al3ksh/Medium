@@ -609,7 +609,7 @@ function NotificationsTab({ settings, onUpdate }) {
             checked={settings.messageSound ?? true}
             onChange={(val) => onUpdate({ messageSound: val })}
           />
-          <span>Message Sound</span>
+          <span>Message Notification Sound</span>
         </div>
       </div>
 
@@ -619,12 +619,22 @@ function NotificationsTab({ settings, onUpdate }) {
             checked={settings.voiceJoinSound ?? true}
             onChange={(val) => onUpdate({ voiceJoinSound: val })}
           />
-          <span>Voice Channel Join/Leave Sound</span>
+          <span>Voice Join / Leave Sound</span>
         </div>
       </div>
 
       <div className="settings-group">
-        <label>Message Sound Volume</label>
+        <div className="toggle-label">
+          <CheckboxSwitch
+            checked={settings.muteSound ?? true}
+            onChange={(val) => onUpdate({ muteSound: val })}
+          />
+          <span>Mute / Deafen Sound</span>
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <label>Sound Volume</label>
         <div className="range-row">
           <input type="range" min="0" max="100" value={settings.soundVolume ?? 80} onChange={(e) => onUpdate({ soundVolume: parseInt(e.target.value) })} />
           <span className="range-value">{settings.soundVolume ?? 80}%</span>

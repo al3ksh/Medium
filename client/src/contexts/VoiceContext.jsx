@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { useSocket } from './SocketContext'
 import { useAuth } from './AuthContext'
 import { loadSettings } from '../utils'
+import { playVoiceJoinSound, playVoiceLeaveSound, playMuteSound, playUnmuteSound, playDeafenSound, playUndeafenSound } from '../utils/notif'
 
 const VoiceContext = createContext(null)
 
@@ -306,6 +307,7 @@ export function VoiceProvider({ children }) {
 
       setVoiceChannel(channel)
       setJoined(true)
+      playVoiceJoinSound()
       socket.emit('voice:join', channel.id)
       localStorage.setItem('voice-channel', JSON.stringify({ id: channel.id, name: channel.name }))
 
@@ -456,6 +458,7 @@ export function VoiceProvider({ children }) {
   }
 
   function leaveVoice() {
+    playVoiceLeaveSound()
     cleanupVoice()
     socket.emit('voice:leave')
   }
@@ -515,6 +518,7 @@ export function VoiceProvider({ children }) {
     setIsMuted(next)
     localStorage.setItem('voice-muted', String(next))
     socket?.emit('voice:mute', next)
+    next ? playMuteSound() : playUnmuteSound()
   }
 
   function toggleDeafen() {
@@ -540,6 +544,7 @@ export function VoiceProvider({ children }) {
       localStorage.setItem('voice-muted', 'false')
     }
     socket?.emit('voice:deafen', next)
+    next ? playDeafenSound() : playUndeafenSound()
   }
 
   return (
