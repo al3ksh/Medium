@@ -1697,6 +1697,18 @@ body {
   cursor: not-allowed;
 }
 
+.char-counter {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 20px;
+  text-align: right;
+}
+
+.char-counter.over {
+  color: var(--red, #ed4245);
+}
+
 .input-actions-right {
   display: flex;
   align-items: center;

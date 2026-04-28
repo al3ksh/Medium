@@ -20,18 +20,22 @@ const uploadRoutes = require('./routes/upload')
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server, {
-  cors: { origin: '*' },
+  cors: { origin: true },
 })
 
 app.use(express.json())
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Content-Disposition', 'inline')
+  next()
+}, express.static(path.join(__dirname, '..', 'uploads')))
 
 app.use('/api/auth', authRoutes)
 app.use('/api/channels', channelRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/upload', uploadRoutes)
 
-const GIPHY_KEY = process.env.GIPHY_API_KEY || '0UTRb7tkDoVsdm/ksdcxf6yo'
+const GIPHY_KEY = process.env.GIPHY_API_KEY || ''
 
 app.get('/api/gif/search', async (req, res) => {
   const q = req.query.q || ''

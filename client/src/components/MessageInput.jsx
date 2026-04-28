@@ -22,6 +22,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   const typingTimeout = useRef(null)
   const formRef = useRef(null)
   const [pickerStyle, setPickerStyle] = useState({})
+  const MAX_CHARS = 2000
 
   function autoResize() {
     const el = inputRef.current
@@ -113,8 +114,8 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   }
 
   function handleChange(e) {
-    const val = e.target.value
-    const pos = e.target.selectionStart
+    const val = e.target.value.slice(0, MAX_CHARS)
+    const pos = Math.min(e.target.selectionStart, val.length)
     setText(val)
     autoResize()
     emitTyping()
@@ -389,6 +390,11 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
           <button type="submit" className="send-btn" disabled={uploading || (!text.trim() && !file)}>
             <SendHorizonal size={16} />
           </button>
+          {text.length > MAX_CHARS * 0.8 && (
+            <span className={`char-counter ${text.length >= MAX_CHARS ? 'over' : ''}`}>
+              {MAX_CHARS - text.length}
+            </span>
+          )}
         </div>
         {mentionUsers.length > 0 && (
           <div className="mention-dropdown">

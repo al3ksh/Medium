@@ -25,6 +25,14 @@ router.post('/login', (req, res) => {
     return res.status(400).json({ error: 'Nickname is required' })
   }
 
+  if (nickname.length < 2 || nickname.length > 20) {
+    return res.status(400).json({ error: 'Nickname must be 2-20 characters' })
+  }
+
+  if (!/^[\p{L}\p{N}_\-. ]+$/u.test(nickname)) {
+    return res.status(400).json({ error: 'Nickname can only contain letters, numbers, spaces, _ - .' })
+  }
+
   if (process.env.PASSPHRASE_ENABLED === 'true') {
     if (!passphrase || passphrase !== process.env.PASSPHRASE) {
       return res.status(403).json({ error: 'Wrong passphrase' })
