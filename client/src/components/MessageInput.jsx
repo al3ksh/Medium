@@ -23,6 +23,13 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   const formRef = useRef(null)
   const [pickerStyle, setPickerStyle] = useState({})
 
+  function autoResize() {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px'
+  }
+
   const emitTyping = useCallback(() => {
     if (!socket || !channelId) return
     socket.emit('typing:start', channelId)
@@ -99,6 +106,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     onSend(text.trim(), attachmentData, nsfw)
     setText('')
     setNsfw(false)
+    setTimeout(() => autoResize(), 0)
     clearTimeout(typingTimeout.current)
     socket?.emit('typing:stop', channelId)
     inputRef.current?.focus()
@@ -108,6 +116,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     const val = e.target.value
     const pos = e.target.selectionStart
     setText(val)
+    autoResize()
     emitTyping()
 
     const before = val.slice(0, pos)
@@ -327,9 +336,8 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
           <Paperclip size={20} />
         </button>
         <input type="file" ref={fileInputRef} onChange={handleFileSelect} hidden />
-        <input
+        <textarea
           ref={inputRef}
-          type="text"
           className="message-input"
           placeholder={uploading ? 'Uploading...' : 'Type a message...'}
           value={text}
@@ -337,6 +345,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
           onKeyDown={handleKeyDown}
           disabled={uploading}
           autoFocus
+          rows={1}
         />
         <div className="input-actions-right" ref={btnRef}>
           <div style={{ position: 'relative' }}>

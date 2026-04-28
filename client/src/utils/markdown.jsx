@@ -115,7 +115,11 @@ export function renderMarkdown(text, options = {}) {
         return <s key={i}>{token.content}</s>
       case 'text':
       default:
-        return token.content
+        return token.content.split('\n').map((line, j, arr) => (
+          <span key={i + '-' + j}>
+            {line}{j < arr.length - 1 && <br />}
+          </span>
+        ))
     }
   })
 }

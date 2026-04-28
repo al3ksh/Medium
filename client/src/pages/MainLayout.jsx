@@ -34,8 +34,10 @@ export default function MainLayout() {
     activeChannelRef.current = ch
     if (ch) {
       localStorage.setItem('active-channel', JSON.stringify({ id: ch.id, name: ch.name, type: ch.type }))
+      document.title = `Medium | ${ch.name}`
     } else {
       localStorage.removeItem('active-channel')
+      document.title = 'Medium'
     }
   }
   const [users, setUsers] = useState([])
@@ -79,7 +81,9 @@ export default function MainLayout() {
         try {
           const saved = JSON.parse(localStorage.getItem('active-channel'))
           if (saved?.id && chs.some(c => c.id === saved.id)) {
-            setActiveChannelRaw(chs.find(c => c.id === saved.id))
+            const ch = chs.find(c => c.id === saved.id)
+            setActiveChannelRaw(ch)
+            document.title = `Medium | ${ch.name}`
           }
         } catch {}
       })
@@ -92,6 +96,7 @@ export default function MainLayout() {
       setChannels((prev) => prev.filter((c) => c.id !== channelId))
       setActiveChannelRaw((prev) => prev?.id === channelId ? null : prev)
       localStorage.removeItem('active-channel')
+      document.title = 'Medium'
     })
 
     socket.on('channel:renamed', (updated) => {
