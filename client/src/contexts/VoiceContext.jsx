@@ -41,6 +41,56 @@ export function VoiceProvider({ children }) {
     } catch {}
   }, [socket])
 
+  useEffect(() => {
+    function applyOutputDevice() {
+      const settings = loadSettings()
+      const sinkId = settings.outputDevice || ''
+      Object.values(remoteAudioRefs.current).forEach((audio) => {
+        if (audio && sinkId && typeof audio.setSinkId === 'function') {
+          audio.setSinkId(sinkId).catch(() => {})
+        }
+      })
+    }
+
+    async function applyInputDevice() {
+      const settings = loadSettings()
+      const deviceId = settings.inputDevice
+      if (!rawStream.current || !audioContext.current) return
+      try {
+        const constraints = deviceId ? { deviceId: { exact: deviceId } } : {}
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: constraints })
+        const newSource = audioContext.current.createMediaStreamSource(stream)
+        const inputGain = audioContext.current.createGain()
+        inputGain.gain.value = (settings.inputVolume ?? 100) / 100
+        const dest = audioContext.current.createMediaStreamDestination()
+
+        newSource.connect(inputGain)
+        inputGain.connect(dest)
+
+        if (rawStream.current) rawStream.current.getTracks().forEach(t => t.stop())
+        rawStream.current = stream
+        localStream.current = dest.stream
+
+        Object.values(peerConnections.current).forEach(pc => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'audio')
+          if (sender) {
+            dest.stream.getAudioTracks().forEach(t => sender.replaceTrack(t))
+          }
+        })
+      } catch (err) {
+        console.error('Failed to switch input device:', err)
+      }
+    }
+
+    function handleSettingsUpdated() {
+      applyOutputDevice()
+      applyInputDevice()
+    }
+
+    window.addEventListener('settings-updated', handleSettingsUpdated)
+    return () => window.removeEventListener('settings-updated', handleSettingsUpdated)
+  }, [])
+
   function createPeerConnection(peerSocketId, isInitiator) {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
 
@@ -169,6 +219,7 @@ export function VoiceProvider({ children }) {
 
   async function joinVoice(channel) {
     try {
+      if (!navigator.mediaDevices) throw new Error('MediaDevices not available (requires HTTPS)')
       const settings = loadSettings()
       const constraints = settings.inputDevice
         ? { audio: { deviceId: { exact: settings.inputDevice } } }
@@ -198,8 +249,12 @@ export function VoiceProvider({ children }) {
       localStorage.setItem('voice-channel', JSON.stringify({ id: channel.id, name: channel.name }))
 
       const outputVol = (settings.outputVolume ?? 100) / 100
+      const sinkId = settings.outputDevice || ''
       Object.values(remoteAudioRefs.current).forEach((audio) => {
-        if (audio) audio.volume = Math.min(outputVol, 2)
+        if (audio) {
+          audio.volume = Math.min(outputVol, 2)
+          if (sinkId && typeof audio.setSinkId === 'function') audio.setSinkId(sinkId)
+        }
       })
 
       const studioMode = settings.voiceMode === 'studio'
@@ -391,6 +446,8 @@ export function VoiceProvider({ children }) {
             if (el) {
               const settings = loadSettings()
               el.volume = Math.min((settings.outputVolume ?? 100) / 100, 2)
+              const sinkId = settings.outputDevice || ''
+              if (sinkId && typeof el.setSinkId === 'function') el.setSinkId(sinkId)
             }
             remoteAudioRefs.current[p.socketId] = el
           }}

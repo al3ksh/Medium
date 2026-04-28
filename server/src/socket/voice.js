@@ -72,4 +72,4 @@ function registerVoiceHandlers(io, socket) {
   })
 }
 
-module.exports = { registerVoiceHandlers }
+module.exports = { registerVoiceHandlers, buildOccupancy }

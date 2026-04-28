@@ -147,6 +147,9 @@ export default function SettingsModal({ onClose }) {
     const next = { ...settings, ...patch }
     setSettings(next)
     saveSettings(next)
+    if ('outputDevice' in patch || 'outputVolume' in patch || 'inputDevice' in patch) {
+      window.dispatchEvent(new Event('settings-updated'))
+    }
   }
 
   return (
@@ -355,13 +358,20 @@ function AccountTab({ settings, onUpdate }) {
 
 function VoiceTab({ settings, onUpdate, voice }) {
   const [devices, setDevices] = useState([])
+  const [outputDevices, setOutputDevices] = useState([])
   const [testVolume, setTestVolume] = useState(0)
   const [isTesting, setIsTesting] = useState(false)
   const audioRefs = useRef(null)
 
   useEffect(() => {
+    if (!navigator.mediaDevices) {
+      setDevices([])
+      setOutputDevices([])
+      return
+    }
     navigator.mediaDevices.enumerateDevices().then((list) => {
       setDevices(list.filter((d) => d.kind === 'audioinput'))
+      setOutputDevices(list.filter((d) => d.kind === 'audiooutput'))
     })
   }, [])
 
@@ -370,6 +380,7 @@ function VoiceTab({ settings, onUpdate, voice }) {
 
     async function initMic() {
       try {
+        if (!navigator.mediaDevices) return
         const constraints = settings.inputDevice
           ? { deviceId: { exact: settings.inputDevice } }
           : {}
@@ -377,11 +388,20 @@ function VoiceTab({ settings, onUpdate, voice }) {
         const ctx = new AudioContext()
         const source = ctx.createMediaStreamSource(stream)
         const analyser = ctx.createAnalyser()
+        const monitorGain = ctx.createGain()
+        monitorGain.gain.value = 0
         source.connect(analyser)
-        // Analyser not connected to ctx.destination by default
         analyser.fftSize = 256
-        
-        audioRefs.current = { ctx, stream, source, analyser }
+
+        const dest = ctx.createMediaStreamDestination()
+        analyser.connect(dest)
+
+        const audioEl = new Audio()
+        audioEl.srcObject = dest.stream
+        audioEl.volume = isTesting ? 1 : 0
+        audioEl.play()
+
+        audioRefs.current = { ctx, stream, source, analyser, monitorGain, audioEl }
         const data = new Uint8Array(analyser.frequencyBinCount)
 
         function loop() {
@@ -403,12 +423,26 @@ function VoiceTab({ settings, onUpdate, voice }) {
       active = false;
       const refs = audioRefs.current;
       if (refs) {
+        if (refs.audioEl) { refs.audioEl.pause(); refs.audioEl.srcObject = null }
         if (refs.stream) refs.stream.getTracks().forEach((t) => t.stop())
         if (refs.ctx) refs.ctx.close()
       }
       audioRefs.current = null;
     }
   }, [settings.inputDevice])
+
+  useEffect(() => {
+    const refs = audioRefs.current
+    if (!refs || !refs.audioEl) return
+    refs.audioEl.volume = isTesting ? 1 : 0
+    if (isTesting) {
+      const settings = loadSettings()
+      const sinkId = settings.outputDevice || ''
+      if (sinkId && typeof refs.audioEl.setSinkId === 'function') {
+        refs.audioEl.setSinkId(sinkId).catch(() => {})
+      }
+    }
+  }, [isTesting])
 
   function testMic() {
     setIsTesting(v => !v)
@@ -436,8 +470,16 @@ function VoiceTab({ settings, onUpdate, voice }) {
 
         <div className="settings-group">
           <label>Output Device</label>
-          <select disabled>
-            <option>Default (Speakers)</option>
+          <select
+            value={settings.outputDevice || ''}
+            onChange={(e) => onUpdate({ outputDevice: e.target.value })}
+          >
+            <option value="">Default</option>
+            {outputDevices.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || `Speaker ${outputDevices.indexOf(d) + 1}`}
+              </option>
+            ))}
           </select>
         </div>
 
