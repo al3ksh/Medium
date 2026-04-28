@@ -7,7 +7,7 @@ import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate, unlockedChannels, onUnlockNeeded, unread }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const { occupancy, joined, voiceChannel, leaveVoice, nickname, isMuted, isDeafened, voiceStates, socketId, speaking, peers } = useVoice()
+  const { occupancy, joined, voiceChannel, leaveVoice, joinVoice, nickname, isMuted, isDeafened, voiceStates, socketId, speaking, peers } = useVoice()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
   const token = localStorage.getItem('token')
@@ -78,6 +78,7 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
             <div
               className={`channel-item ${activeId === ch.id ? 'active' : ''}${isLocked ? ' channel-locked' : ''}`}
               onClick={() => handleSelect(ch)}
+              onDoubleClick={() => { if (type === 'voice' && !isLocked) joinVoice(ch) }}
               onContextMenu={(e) => { e.preventDefault(); onChannelContextMenu?.(e, ch) }}
             >
               <span className="channel-icon">

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { User, Volume2, VolumeX, PhoneOff } from 'lucide-react'
 
 export default function UserContextMenu({ user, x, y, nickname, onProfile, onMuteToggle, onVolumeChange, isMuted, volume, voiceChannelOfUser, onKickFromVoice, onClose }) {
@@ -19,8 +19,18 @@ export default function UserContextMenu({ user, x, y, nickname, onProfile, onMut
     }
   }, [onClose])
 
-  const menuX = Math.min(x, window.innerWidth - 220)
-  const menuY = Math.min(y, window.innerHeight - 200)
+  const menuW = 220
+  const menuX = Math.min(x, window.innerWidth - menuW)
+  const [menuY, setMenuY] = useState(y)
+
+  useEffect(() => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect()
+      if (rect.bottom > window.innerHeight) {
+        setMenuY(Math.max(0, y - rect.height))
+      }
+    }
+  }, [])
 
   return (
     <div className="context-menu-overlay" onClick={onClose}>

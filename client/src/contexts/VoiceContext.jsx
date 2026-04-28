@@ -261,6 +261,7 @@ export function VoiceProvider({ children }) {
     })
 
     socket.on('voice:kicked', () => {
+      playVoiceLeaveSound()
       cleanupVoice()
     })
 

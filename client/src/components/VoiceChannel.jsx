@@ -86,7 +86,12 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                   {channelUsers.map((name, i) => {
                     const st = voiceStates[name]
                     return (
-                      <div key={`${name}-${i}`} className="voice-peer-observer">
+                      <div
+                        key={`${name}-${i}`}
+                        className="voice-peer-observer clickable"
+                        onClick={(e) => onUserClick?.({ user: name, x: e.clientX + 10, y: e.clientY - 100 })}
+                        onContextMenu={(e) => { e.preventDefault(); onUserContextMenu?.(e, name) }}
+                      >
                         <div className="voice-avatar-sm" style={getAvatar(name) ? {} : { background: getColor(name) }}>
                           {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
                         </div>
