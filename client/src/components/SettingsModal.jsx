@@ -234,16 +234,43 @@ function AccountTab({ settings, onUpdate }) {
   const getBanner = useUserBanner()
   const color = avatarColor || nicknameToColor(nickname)
   const currentBio = getBio(nickname)
-  const avatarUrl = getAvatar(nickname)
-  const bannerUrl = getBanner(nickname)
+  const currentAvatar = getAvatar(nickname)
+  const currentBanner = getBanner(nickname)
   const [bioText, setBioText] = useState(currentBio)
+  const [pendingAvatar, setPendingAvatar] = useState(null)
+  const [pendingBanner, setPendingBanner] = useState(null)
+  const [pendingAvatarBlob, setPendingAvatarBlob] = useState(null)
+  const [pendingBannerBlob, setPendingBannerBlob] = useState(null)
+  const [removeAvatar, setRemoveAvatar] = useState(false)
+  const [removeBanner, setRemoveBanner] = useState(false)
+  const [pendingColor, setPendingColor] = useState(null)
+  const [saved, setSaved] = useState(false)
   const [cropModal, setCropModal] = useState(null)
   const [cropError, setCropError] = useState('')
   const avatarInputRef = useRef(null)
   const bannerInputRef = useRef(null)
 
+  const displayAvatar = removeAvatar ? null : (pendingAvatar || currentAvatar)
+  const displayBanner = removeBanner ? null : (pendingBanner || currentBanner)
+  const displayColor = pendingColor || color
+  const hasChanges = bioText !== currentBio || pendingAvatarBlob || pendingBannerBlob || removeAvatar || removeBanner || pendingColor
+
   const ALLOWED = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
   const MAX_SIZE = 5 * 1024 * 1024
+
+  async function uploadBlob(blob, type) {
+    const formData = new FormData()
+    formData.append('file', blob, `${type}_${Date.now()}.jpg`)
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: formData,
+    })
+    if (res.ok) {
+      const data = await res.json()
+      socket.emit(`user:${type}`, data.url)
+    }
+  }
 
   function validateAndOpen(e, type) {
     setCropError('')
@@ -265,50 +292,77 @@ function AccountTab({ settings, onUpdate }) {
     e.target.value = ''
   }
 
-  async function handleCrop(blob, type) {
-    const formData = new FormData()
-    formData.append('file', blob, `${type}_${Date.now()}.jpg`)
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: formData,
-    })
-    if (res.ok) {
-      const data = await res.json()
-      socket.emit(`user:${type}`, data.url)
+  function handleCrop(blob, type) {
+    const url = URL.createObjectURL(blob)
+    if (type === 'avatar') {
+      setPendingAvatar(url)
+      setPendingAvatarBlob(blob)
+      setRemoveAvatar(false)
+    } else {
+      setPendingBanner(url)
+      setPendingBannerBlob(blob)
+      setRemoveBanner(false)
     }
     setCropModal(null)
   }
 
-  function handleBioChange(e) {
-    const val = e.target.value.slice(0, 190)
-    setBioText(val)
+  async function handleSave() {
+    if (pendingAvatarBlob) await uploadBlob(pendingAvatarBlob, 'avatar')
+    else if (removeAvatar) socket.emit('user:avatar', null)
+
+    if (pendingBannerBlob) await uploadBlob(pendingBannerBlob, 'banner')
+    else if (removeBanner) socket.emit('user:banner', null)
+
+    if (bioText !== currentBio) socket.emit('user:bio', bioText)
+
+    if (pendingColor) {
+      onUpdate({ avatarColor: pendingColor })
+      updateAvatarColor(pendingColor)
+    }
+
+    setPendingAvatar(null)
+    setPendingBanner(null)
+    setPendingAvatarBlob(null)
+    setPendingBannerBlob(null)
+    setRemoveAvatar(false)
+    setRemoveBanner(false)
+    setPendingColor(null)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
   }
 
-  function handleBioBlur() {
-    socket.emit('user:bio', bioText)
+  function handleCancel() {
+    setBioText(currentBio)
+    setPendingAvatar(null)
+    setPendingBanner(null)
+    setPendingAvatarBlob(null)
+    setPendingBannerBlob(null)
+    setRemoveAvatar(false)
+    setRemoveBanner(false)
+    setPendingColor(null)
+    setCropError('')
   }
 
   return (
     <div className="settings-section">
-      <h3>My Account</h3>
+      <h3>My Profile</h3>
       <div className="account-card">
-        <div className="account-banner" style={{ background: color }}>
-          {bannerUrl && <img src={bannerUrl} alt="" className="account-banner-img" />}
+        <div className="account-banner" style={{ background: displayColor }}>
+          {displayBanner && <img src={displayBanner} alt="" className="account-banner-img" />}
           <div className="banner-edit-btns">
             <button onClick={() => bannerInputRef.current?.click()}><Camera size={16} /></button>
-            {bannerUrl && <button onClick={() => socket.emit('user:banner', null)}><Trash2 size={16} /></button>}
+            {(displayBanner || pendingBanner) && <button onClick={() => { setPendingBanner(null); setPendingBannerBlob(null); setRemoveBanner(true) }}><Trash2 size={16} /></button>}
           </div>
           <input ref={bannerInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp" hidden onChange={(e) => validateAndOpen(e, 'banner')} />
         </div>
         <div className="account-info">
           <div className="account-avatar-wrap">
-            <div className="account-avatar" style={avatarUrl ? {} : { background: color }}>
-              {avatarUrl ? <img src={avatarUrl} alt="" /> : nickname[0]?.toUpperCase()}
+            <div className="account-avatar" style={displayAvatar ? {} : { background: displayColor }}>
+              {displayAvatar ? <img src={displayAvatar} alt="" /> : nickname[0]?.toUpperCase()}
             </div>
             <div className="avatar-edit-btns">
               <button onClick={() => avatarInputRef.current?.click()}><Camera size={14} /></button>
-              {avatarUrl && <button onClick={() => socket.emit('user:avatar', null)}><Trash2 size={14} /></button>}
+              {(displayAvatar || pendingAvatar) && <button onClick={() => { setPendingAvatar(null); setPendingAvatarBlob(null); setRemoveAvatar(true) }}><Trash2 size={14} /></button>}
             </div>
             <input ref={avatarInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp" hidden onChange={(e) => validateAndOpen(e, 'avatar')} />
           </div>
@@ -330,8 +384,7 @@ function AccountTab({ settings, onUpdate }) {
             maxLength={190}
             placeholder="Tell others something about yourself..."
             value={bioText}
-            onChange={handleBioChange}
-            onBlur={handleBioBlur}
+            onChange={(e) => setBioText(e.target.value.slice(0, 190))}
           />
           <span className="bio-counter">{MAX_BIO - bioText.length}</span>
         </div>
@@ -345,16 +398,22 @@ function AccountTab({ settings, onUpdate }) {
             '#e91e63', '#00bcd4', '#ff9800', '#795548', '#ffffff'].map((c) => (
             <button
               key={c}
-              className={`color-swatch ${color === c ? 'active' : ''}`}
+              className={`color-swatch ${displayColor === c ? 'active' : ''}`}
               style={{ background: c }}
-              onClick={() => {
-                onUpdate({ avatarColor: c })
-                updateAvatarColor(c)
-              }}
+              onClick={() => setPendingColor(c)}
             />
           ))}
         </div>
       </div>
+
+      {hasChanges && (
+        <div className="profile-actions">
+          <button className="profile-btn save" onClick={handleSave}>Save Changes</button>
+          <button className="profile-btn cancel" onClick={handleCancel}>Cancel</button>
+        </div>
+      )}
+
+      {saved && <div className="profile-saved">Profile saved!</div>}
 
       {cropModal && (
         <CropModal
