@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Search } from 'lucide-react'
+import CheckboxSwitch from './CheckboxSwitch'
 
 export default function SearchModal({ onClose, channels, nickname }) {
   const [query, setQuery] = useState('')
@@ -89,7 +90,7 @@ export default function SearchModal({ onClose, channels, nickname }) {
             />
           </div>
           <label className="search-private-toggle">
-            <input type="checkbox" checked={includePrivate} onChange={(e) => setIncludePrivate(e.target.checked)} />
+            <CheckboxSwitch checked={includePrivate} onChange={setIncludePrivate} />
             <span>Include private channels</span>
           </label>
           {includePrivate && (

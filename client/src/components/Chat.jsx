@@ -8,6 +8,8 @@ import { isChannelMuted, getNotifSetting } from './ChannelContextMenu'
 import FadeImage from './FadeImage'
 import LinkPreview from './LinkPreview'
 import MessageInput from './MessageInput'
+import MessageContextMenu from './MessageContextMenu'
+import EmojiPicker from './EmojiPicker'
 import ConfirmModal from './ConfirmModal'
 
 function hashColor(str) {

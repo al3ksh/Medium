@@ -26,7 +26,7 @@ export function saveSettings(settings) {
 
 export const THEMES = {
   amoled: {
-    label: 'AMOLED Black',
+    label: 'Black (default)',
     vars: {
       '--bg-primary': '#0a0a0a',
       '--bg-secondary': '#000000',

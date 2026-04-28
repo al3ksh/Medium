@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
-import { Paperclip, SendHorizonal, X, Reply, Smile, ImageIcon } from 'lucide-react'
+import { Paperclip, SendHorizonal, X, Reply, Smile, ImageIcon, HelpCircle } from 'lucide-react'
 import EmojiPicker from './EmojiPicker'
 import GifPicker from './GifPicker'
 import { showToast } from './ToastContainer'
@@ -14,6 +14,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   const [mentionIndex, setMentionIndex] = useState(0)
   const [activePicker, setActivePicker] = useState(null)
   const [nsfw, setNsfw] = useState(false)
+  const [showMdHelp, setShowMdHelp] = useState(false)
   const inputRef = useRef(null)
   const fileInputRef = useRef(null)
   const pickerRef = useRef(null)
@@ -195,6 +196,20 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   }, [])
 
   useEffect(() => {
+    if (!showMdHelp && !activePicker) return
+    function handleKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        setActivePicker(null)
+        setShowMdHelp(false)
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [showMdHelp, activePicker])
+
+  useEffect(() => {
     if (!activePicker) return
     function handleClick(e) {
       if (pickerRef.current && !pickerRef.current.contains(e.target) && btnRef.current && !btnRef.current.contains(e.target)) {
@@ -204,6 +219,17 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [activePicker])
+
+  useEffect(() => {
+    if (!showMdHelp) return
+    function handleClick(e) {
+      if (!e.target.closest('.md-help-popover') && !e.target.closest('.md-help-btn')) {
+        setShowMdHelp(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showMdHelp])
 
   // Position picker so it always fits on screen, opens to the left above the input
   useLayoutEffect(() => {
@@ -313,10 +339,32 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
           autoFocus
         />
         <div className="input-actions-right" ref={btnRef}>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className={`picker-btn md-help-btn ${showMdHelp ? 'active' : ''}`}
+              onClick={() => { setShowMdHelp(v => !v); setActivePicker(null) }}
+              title="Markdown"
+            >
+              <HelpCircle size={20} />
+            </button>
+            {showMdHelp && (
+              <div className="md-help-popover">
+                <div className="md-help-title">Markdown</div>
+                <div className="md-help-row"><code>**bold**</code> <span>bold</span></div>
+                <div className="md-help-row"><code>*italic*</code> <span style={{ fontStyle: 'italic' }}>italic</span></div>
+                <div className="md-help-row"><code>~~strike~~</code> <span style={{ textDecoration: 'line-through' }}>strike</span></div>
+                <div className="md-help-row"><code>__underline__</code> <span style={{ textDecoration: 'underline' }}>underline</span></div>
+                <div className="md-help-row"><code>`code`</code> <span>inline code</span></div>
+                <div className="md-help-row"><code>```block```</code> <span>code block</span></div>
+                <div className="md-help-row"><code>||spoiler||</code> <span>spoiler</span></div>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             className={`picker-btn gif-text-btn ${activePicker === 'gif' ? 'active' : ''}`}
-            onClick={() => setActivePicker(p => p === 'gif' ? null : 'gif')}
+            onClick={() => { setActivePicker(p => p === 'gif' ? null : 'gif'); setShowMdHelp(false) }}
             title="GIF"
           >
             GIF
@@ -324,7 +372,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
           <button
             type="button"
             className={`picker-btn ${activePicker === 'emoji' ? 'active' : ''}`}
-            onClick={() => setActivePicker(p => p === 'emoji' ? null : 'emoji')}
+            onClick={() => { setActivePicker(p => p === 'emoji' ? null : 'emoji'); setShowMdHelp(false) }}
             title="Emoji"
           >
             <Smile size={20} />

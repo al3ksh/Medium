@@ -6,6 +6,7 @@ import { nicknameToColor, loadSettings, saveSettings, THEMES, THEME_VARS, applyT
 import { X, LogOut, Check, Palette, Camera, Trash2, User, Paintbrush, Volume2, Bell } from 'lucide-react'
 import CropModal from './CropModal'
 import ConfirmModal from './ConfirmModal'
+import CheckboxSwitch from './CheckboxSwitch'
 
 const MAX_BIO = 190
 
@@ -45,16 +46,6 @@ function TooltipSlider({ value, min, max, onChange, suffix = '%', disabled = fal
 }
 
 // Discord-like switch
-function CheckboxSwitch({ checked, onChange }) {
-  return (
-    <div className={`discord-switch ${checked ? 'checked' : ''}`} onClick={() => onChange(!checked)}>
-      <div className="discord-switch-handle">
-        {checked && <Check size={12} className="discord-switch-icon" />}
-      </div>
-    </div>
-  )
-}
-
 function AppearanceTab({ settings, onUpdate }) {
   const currentTheme = settings.theme || 'amoled'
   const customTheme = settings.customTheme || { ...THEMES.amoled.vars }
@@ -612,25 +603,23 @@ function NotificationsTab({ settings, onUpdate }) {
       <h3>Notifications</h3>
 
       <div className="settings-group">
-        <label className="toggle-label">
-          <input
-            type="checkbox"
+        <div className="toggle-label">
+          <CheckboxSwitch
             checked={settings.messageSound ?? true}
-            onChange={(e) => onUpdate({ messageSound: e.target.checked })}
+            onChange={(val) => onUpdate({ messageSound: val })}
           />
-          Message Sound
-        </label>
+          <span>Message Sound</span>
+        </div>
       </div>
 
       <div className="settings-group">
-        <label className="toggle-label">
-          <input
-            type="checkbox"
+        <div className="toggle-label">
+          <CheckboxSwitch
             checked={settings.voiceJoinSound ?? true}
-            onChange={(e) => onUpdate({ voiceJoinSound: e.target.checked })}
+            onChange={(val) => onUpdate({ voiceJoinSound: val })}
           />
-          Voice Channel Join/Leave Sound
-        </label>
+          <span>Voice Channel Join/Leave Sound</span>
+        </div>
       </div>
 
       <div className="settings-group">
