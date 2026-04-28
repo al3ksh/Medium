@@ -125,7 +125,13 @@ export default function AuthGate({ onLogin }) {
     <div className="auth-gate premium-split">
       <div className="auth-split-left" onClick={handleLeftClick}>
         <div className="liquid-aurora"></div>
-        <img src="/mediu color upscale.png" alt="Medium Logo" className="auth-premium-logo" />
+        <img 
+          src="/mediu color upscale.webp" 
+          alt="Medium Logo" 
+          className="auth-premium-logo" 
+          fetchPriority="high" 
+          loading="eager" 
+        />
         {ripples.map((r) => (
           <div key={r.id} className="ripple-effect" style={{ left: r.x, top: r.y }} />
         ))}

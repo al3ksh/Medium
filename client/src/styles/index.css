@@ -1166,6 +1166,27 @@ body {
 .message-image-container {
   display: inline-block;
   margin-top: 0.35rem;
+  position: relative;
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  min-width: 200px;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+.message-image-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 25%, var(--bg-tertiary) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: gif-shimmer 1.5s infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.message-image-container:has(.loaded)::before {
+  display: none;
 }
 
 .message-image {
@@ -1176,6 +1197,8 @@ body {
   transition: filter 0.2s, opacity 0.3s ease;
   display: block;
   opacity: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .message-image.loaded {
@@ -1237,6 +1260,27 @@ body {
 .message-gif-container {
   display: inline-block;
   margin-top: 0.35rem;
+  position: relative;
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  min-width: 200px;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+.message-gif-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 25%, var(--bg-tertiary) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: gif-shimmer 1.5s infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.message-gif-container:has(.loaded)::before {
+  display: none;
 }
 
 .message-gif {
@@ -1247,6 +1291,8 @@ body {
   display: block;
   opacity: 0;
   transition: opacity 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .message-gif.loaded {
