@@ -1930,6 +1930,7 @@ body {
 
 .gif-picker {
   width: 360px;
+  min-height: 360px;
 }
 
 .gif-grid {

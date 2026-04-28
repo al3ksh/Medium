@@ -16,7 +16,11 @@ export default function GifPicker({ onSelect, onClose }) {
   }, [])
 
   const searchGifs = useCallback((q) => {
-    if (!q.trim()) { setGifs([]); return }
+    if (!q.trim()) { 
+      setGifs([])
+      setLoading(false)
+      return 
+    }
     setLoading(true)
     fetch(`/api/gif/search?q=${encodeURIComponent(q)}`)
       .then(r => r.json())
@@ -28,7 +32,13 @@ export default function GifPicker({ onSelect, onClose }) {
     const val = e.target.value
     setSearch(val)
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => searchGifs(val), 400)
+    if (!val.trim()) {
+      setGifs([])
+      setLoading(false)
+    } else {
+      setLoading(true)
+      debounceRef.current = setTimeout(() => searchGifs(val), 400)
+    }
   }
 
   const items = search ? gifs : trending
@@ -46,14 +56,23 @@ export default function GifPicker({ onSelect, onClose }) {
         />
       </div>
       <div className="gif-grid">
-        {loading && <div className="gif-loading">Searching...</div>}
+        {loading && items.length === 0 && (
+          <>
+            <div className="gif-skeleton"></div>
+            <div className="gif-skeleton"></div>
+            <div className="gif-skeleton"></div>
+            <div className="gif-skeleton"></div>
+            <div className="gif-skeleton"></div>
+            <div className="gif-skeleton"></div>
+          </>
+        )}
         {!loading && items.length === 0 && search && (
           <div className="gif-loading">No GIFs found</div>
         )}
-        {!loading && items.map(gif => (
+        {items.length > 0 && items.map(gif => (
           <button
             key={gif.id}
-            className="gif-item"
+            className={`gif-item ${loading ? 'gif-loading-dim' : ''}`}
             onClick={() => { onSelect(gif.url); onClose() }}
           >
             <img src={gif.preview} alt={gif.title} loading="lazy" />
