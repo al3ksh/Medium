@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X, Paperclip, Reply, Pencil, SmilePlus, ChevronDown } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
-import { useUserColor, useUserAvatar, useAuth } from '../contexts/AuthContext'
+import { useUserColor, useUserAvatar, useAuth, useNickUserIds } from '../contexts/AuthContext'
 import { loadSettings } from '../utils'
 import { renderMarkdown } from '../utils/markdown.jsx'
 import { isChannelMuted, getNotifSetting } from './ChannelContextMenu'
@@ -27,6 +27,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const getAvatar = useUserAvatar()
   const auth = useAuth()
   const myUserId = auth?.userId
+  const nickUserIds = useNickUserIds()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [imageViewer, setImageViewer] = useState(null)
@@ -302,7 +303,8 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
           <div className="chat-empty">No messages yet. Say something!</div>
         ) : (
           messages.map((msg) => {
-            const isImpersonated = msg.nickname === nickname && msg.user_id && msg.user_id !== myUserId
+            const currentUid = nickUserIds[msg.nickname]
+            const isImpersonated = msg.user_id && currentUid && msg.user_id !== currentUid
             const isOwn = msg.user_id === myUserId
             const isEditing = editingId === msg.id
             return (

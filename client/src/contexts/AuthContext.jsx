@@ -35,3 +35,8 @@ export function useUserBanner() {
   const auth = useContext(AuthContext)
   return (name) => auth?.userProfiles?.[name]?.banner || null
 }
+
+export function useNickUserIds() {
+  const auth = useContext(AuthContext)
+  return auth?.nickUserIds || {}
+}

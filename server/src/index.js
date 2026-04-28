@@ -10,7 +10,7 @@ const { socketAuthMiddleware } = require('./middleware/auth')
 const { startPurgeInterval } = require('./services/purge')
 const { registerChatHandlers } = require('./socket/chat')
 const { registerVoiceHandlers } = require('./socket/voice')
-const { onlineUsers } = require('./store')
+const { onlineUsers, gracePeriods } = require('./store')
 
 const authRoutes = require('./routes/auth')
 const channelRoutes = require('./routes/channels')
@@ -108,15 +108,6 @@ startPurgeInterval()
 const userColors = new Map()
 const userProfiles = new Map()
 
-const biosRows = db.prepare('SELECT nickname, bio, avatar_url, banner_url FROM user_bios').all()
-for (const row of biosRows) {
-  const profile = {}
-  if (row.bio) profile.bio = row.bio
-  if (row.avatar_url) profile.avatar = row.avatar_url
-  if (row.banner_url) profile.banner = row.banner_url
-  if (Object.keys(profile).length > 0) userProfiles.set(row.nickname, profile)
-}
-
 function broadcastProfiles() {
   io.emit('user:profiles', Object.fromEntries(userProfiles))
 }
@@ -125,14 +116,24 @@ function broadcastColors() {
   io.emit('user:colors', Object.fromEntries(userColors))
 }
 
+function buildNickUserIds() {
+  const map = {}
+  for (const [, entry] of onlineUsers) {
+    map[entry.nickname] = entry.userId
+  }
+  return map
+}
+
 io.use(socketAuthMiddleware)
 
 io.on('connection', (socket) => {
   const { nickname, userId } = socket.user
   onlineUsers.set(socket.id, { nickname, userId })
+  gracePeriods.delete(nickname)
 
   console.log(`[socket] ${nickname} (${userId?.slice(0,8)}) connected (${socket.id})`)
   io.emit('users:update', Array.from(onlineUsers.values()).map(u => u.nickname))
+  io.emit('user:ids', buildNickUserIds())
 
   socket.emit('user:colors', Object.fromEntries(userColors))
   socket.emit('user:profiles', Object.fromEntries(userProfiles))
@@ -219,9 +220,28 @@ io.on('connection', (socket) => {
     for (const [, entry] of onlineUsers) {
       if (entry.nickname === nickname) { stillOnline = true; break }
     }
-    if (!stillOnline) userColors.delete(nickname)
+    if (!stillOnline) {
+      userColors.delete(nickname)
+      gracePeriods.set(nickname, { userId, expiresAt: Date.now() + 30000 })
+      const profileKey = nickname
+      const profileData = userProfiles.get(profileKey)
+      if (profileData) {
+        setTimeout(() => {
+          let returned = false
+          for (const [, entry] of onlineUsers) {
+            if (entry.userId === userId) { returned = true; break }
+          }
+          if (!returned) {
+            userProfiles.delete(profileKey)
+            db.prepare('DELETE FROM user_bios WHERE nickname = ?').run(profileKey)
+            broadcastProfiles()
+          }
+        }, 30000)
+      }
+    }
 
     io.emit('users:update', Array.from(onlineUsers.values()).map(u => u.nickname))
+    io.emit('user:ids', buildNickUserIds())
     broadcastColors()
     broadcastProfiles()
   })

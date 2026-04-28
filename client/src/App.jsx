@@ -58,6 +58,10 @@ export default function App() {
             setAuth((a) => a ? { ...a, userProfiles: profiles } : a)
           })
 
+          s.on('user:ids', (ids) => {
+            setAuth((a) => a ? { ...a, nickUserIds: ids } : a)
+          })
+
           setSocket(s)
           setAuth((a) => ({ ...a, ready: true }))
         } else {

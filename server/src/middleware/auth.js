@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const { onlineUsers } = require('../store')
+const { onlineUsers, gracePeriods } = require('../store')
 
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization
@@ -26,12 +26,24 @@ function socketAuthMiddleware(socket, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     socket.user = decoded
 
+    const { nickname, userId } = decoded
+
     for (const [, entry] of onlineUsers) {
-      if (entry.nickname === decoded.nickname && entry.userId !== decoded.userId) {
+      if (entry.nickname === nickname && entry.userId !== userId) {
         return next(new Error('Nickname in use'))
       }
     }
 
+    const grace = gracePeriods.get(nickname)
+    if (grace && grace.userId !== userId && Date.now() < grace.expiresAt) {
+      return next(new Error('Nickname in use'))
+    }
+    if (grace && grace.userId !== userId && Date.now() >= grace.expiresAt) {
+      gracePeriods.delete(nickname)
+    }
+    if (grace && grace.userId === userId) {
+      gracePeriods.delete(nickname)
+    }
     next()
   } catch (err) {
     if (err.message === 'Nickname in use') {
