@@ -1435,18 +1435,33 @@ body {
 }
 
 .message-file {
-  display: inline-block;
-  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.75rem;
   background: var(--bg-secondary);
+  border: 1px solid var(--border-color, rgba(255,255,255,0.08));
   border-radius: var(--radius);
-  color: var(--accent);
+  color: var(--text-primary);
   text-decoration: none;
   margin-top: 0.35rem;
-  font-size: 0.85rem;
+  max-width: 520px;
+  transition: background 0.15s;
 }
 
 .message-file:hover {
-  text-decoration: underline;
+  background: rgba(255,255,255,0.04);
+}
+
+.message-file-download {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-left: 12px;
+  transition: color 0.15s;
+}
+
+.message-file:hover .message-file-download {
+  color: var(--accent);
 }
 
 .txt-preview {
@@ -1472,20 +1487,7 @@ body {
   background: rgba(255,255,255,0.04);
 }
 
-.txt-preview-info {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: var(--accent);
-  font-size: 0.85rem;
-  min-width: 0;
-}
 
-.txt-preview-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .txt-preview-actions {
   display: flex;

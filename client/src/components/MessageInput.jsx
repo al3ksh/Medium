@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
-import { Paperclip, SendHorizonal, X, Reply, Smile, ImageIcon, HelpCircle } from 'lucide-react'
+import { Paperclip, SendHorizonal, X, Reply, Smile, ImageIcon, HelpCircle, FileText, File } from 'lucide-react'
 import EmojiPicker from './EmojiPicker'
 import GifPicker from './GifPicker'
 import { showToast } from './ToastContainer'
@@ -299,7 +299,11 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
               </div>
             ) : (
               <div className="file-preview-icon">
-                <ImageIcon size={20} />
+                {file.type?.startsWith('text/') || file.name?.endsWith('.txt') ? (
+                  <FileText size={20} />
+                ) : (
+                  <File size={20} />
+                )}
               </div>
             )}
             <div className="file-preview-details">

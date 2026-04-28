@@ -123,9 +123,16 @@ function TxtPreview({ url, name }) {
   return (
     <div className="txt-preview">
       <div className="txt-preview-header" onClick={toggle}>
-        <div className="txt-preview-info">
-          <FileText size={16} />
-          <span className="txt-preview-name">{name || 'text.txt'}</span>
+        <div className="file-preview-info">
+          <div className="file-preview-icon">
+            <FileText size={20} />
+          </div>
+          <div className="file-preview-details">
+            <span className="file-preview-name">{name || 'text.txt'}</span>
+            <span className="file-preview-size">
+              {data ? `${(data.totalChars / 1024).toFixed(1)} KB` : 'Text Document'}
+            </span>
+          </div>
         </div>
         <div className="txt-preview-actions">
           <button className="txt-preview-view" onClick={openModal} title="View in fullscreen">
@@ -596,7 +603,16 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                 )}
                 {msg.attachment && !isImage(msg.attachment_type) && msg.attachment_type !== 'text/plain' && (
                   <a href={msg.attachment} target="_blank" rel="noreferrer" className="message-file">
-                    <Paperclip size={14} /> {msg.attachment_name || 'File'}
+                    <div className="file-preview-info">
+                      <div className="file-preview-icon">
+                        <Paperclip size={20} />
+                      </div>
+                      <div className="file-preview-details">
+                        <span className="file-preview-name">{msg.attachment_name || 'File'}</span>
+                        <span className="file-preview-size">Click to download</span>
+                      </div>
+                    </div>
+                    <Download size={16} className="message-file-download" />
                   </a>
                 )}
                   </>
