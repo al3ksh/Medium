@@ -6,7 +6,24 @@ import { playVoiceJoinSound, playVoiceLeaveSound, playMuteSound, playUnmuteSound
 
 const VoiceContext = createContext(null)
 
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+]
+
+let cachedIceServers = null
+async function getIceServers() {
+  if (cachedIceServers) return cachedIceServers
+  try {
+    const res = await fetch('/api/ice-servers')
+    if (res.ok) {
+      cachedIceServers = await res.json()
+      setTimeout(() => { cachedIceServers = null }, 3600000)
+      return cachedIceServers
+    }
+  } catch {}
+  return ICE_SERVERS
+}
 
 export function VoiceProvider({ children }) {
   const socket = useSocket()
@@ -127,8 +144,9 @@ export function VoiceProvider({ children }) {
     return () => window.removeEventListener('settings-updated', handleSettingsUpdated)
   }, [])
 
-  function createPeerConnection(peerSocketId, isInitiator) {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+  async function createPeerConnection(peerSocketId, isInitiator) {
+    const servers = await getIceServers()
+    const pc = new RTCPeerConnection({ iceServers: servers })
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
@@ -164,9 +182,9 @@ export function VoiceProvider({ children }) {
     return pc
   }
 
-  function createPeerConnections(peerList) {
+  async function createPeerConnections(peerList) {
     for (const peer of peerList) {
-      const pc = createPeerConnection(peer.socketId, true)
+      const pc = await createPeerConnection(peer.socketId, true)
       peerConnections.current[peer.socketId] = pc
     }
   }
@@ -185,7 +203,7 @@ export function VoiceProvider({ children }) {
       setPeerMuted(muted)
       setPeerDeafened(deafened)
       if (list.length > 0) {
-        createPeerConnections(list)
+        await createPeerConnections(list)
       }
     }
 
@@ -231,12 +249,12 @@ export function VoiceProvider({ children }) {
       }
     }
 
-    function onSignal(data) {
+    async function onSignal(data) {
       const { from, type, sdp, candidate } = data
       let pc = peerConnections.current[from]
 
       if (type === 'offer' && !pc) {
-        pc = createPeerConnection(from, false)
+        pc = await createPeerConnection(from, false)
         peerConnections.current[from] = pc
       }
 

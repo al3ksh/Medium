@@ -73,6 +73,25 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() })
 })
 
+app.get('/api/ice-servers', (req, res) => {
+  const servers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ]
+  if (process.env.TURN_URL && process.env.TURN_SECRET) {
+    const ttl = 86400
+    const username = `${Math.floor(Date.now() / 1000) + ttl}:medium`
+    const crypto = require('crypto')
+    const credential = crypto.createHmac('sha1', process.env.TURN_SECRET).update(username).digest('base64')
+    servers.push({
+      urls: process.env.TURN_URL,
+      username,
+      credential,
+    })
+  }
+  res.json(servers)
+})
+
 app.get('/api/link-preview', async (req, res) => {
   const url = req.query.url
   if (!url) return res.json(null)
