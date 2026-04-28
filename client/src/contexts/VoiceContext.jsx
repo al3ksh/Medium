@@ -192,7 +192,7 @@ export function VoiceProvider({ children }) {
   useEffect(() => {
     if (!socket) return
 
-    function onPeers(list) {
+    async function onPeers(list) {
       setPeers(list)
       const muted = {}
       const deafened = {}
