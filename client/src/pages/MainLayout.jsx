@@ -292,6 +292,7 @@ export default function MainLayout() {
           onUnlockNeeded={handleUnlock}
         />
 
+        <div className="sidebar-bottom">
         {joined && voiceChannel && (
           <div className="voice-connected-bar">
             {ping !== null && (
@@ -339,6 +340,7 @@ export default function MainLayout() {
               <Settings size={16} />
             </button>
           </div>
+        </div>
         </div>
       </aside>
 
