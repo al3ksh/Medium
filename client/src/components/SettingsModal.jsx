@@ -410,11 +410,14 @@ function VoiceTab({ settings, onUpdate, voice, onMicTestChange }) {
         analyser.fftSize = 256
 
         const dest = ctx.createMediaStreamDestination()
+        source.connect(analyser)
         analyser.connect(dest)
+        source.connect(monitorGain)
+        monitorGain.connect(dest)
 
         const audioEl = new Audio()
         audioEl.srcObject = dest.stream
-        audioEl.volume = isTesting ? 1 : 0
+        audioEl.volume = 0
         audioEl.play()
 
         audioRefs.current = { ctx, stream, source, analyser, monitorGain, audioEl }
@@ -449,6 +452,10 @@ function VoiceTab({ settings, onUpdate, voice, onMicTestChange }) {
 
   function testMic() {
     const willTest = !isTesting
+    if (audioRefs.current) {
+      audioRefs.current.monitorGain.gain.value = willTest ? 1 : 0
+      if (audioRefs.current.audioEl) audioRefs.current.audioEl.volume = willTest ? 1 : 0
+    }
     if (willTest && voice.joined) {
       wasDeafenedBefore.current = voice.isDeafened
       wasMutedBefore.current = voice.isMuted
