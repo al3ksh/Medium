@@ -37,7 +37,7 @@ export default function MainLayout() {
       document.title = `Medium | ${ch.name}`
     } else {
       localStorage.removeItem('active-channel')
-      document.title = 'Medium'
+      document.title = 'Medium — Make contact'
     }
   }
   const [users, setUsers] = useState([])
@@ -96,7 +96,7 @@ export default function MainLayout() {
       setChannels((prev) => prev.filter((c) => c.id !== channelId))
       setActiveChannelRaw((prev) => prev?.id === channelId ? null : prev)
       localStorage.removeItem('active-channel')
-      document.title = 'Medium'
+      document.title = 'Medium — Make contact'
     })
 
     socket.on('channel:renamed', (updated) => {
@@ -245,6 +245,7 @@ export default function MainLayout() {
         <div className="sidebar-header" style={{ gap: '0.6rem' }}>
           <img src="/logo 11.png" alt="" style={{ height: '28px', objectFit: 'contain' }} />
           <h2 style={{ fontSize: '1.25rem' }}>Medium</h2>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '-0.15rem' }}>Make contact</span>
           <button className="footer-btn" style={{ marginLeft: 'auto' }} onClick={() => setShowSearch(true)} title="Search">
             <Search size={16} />
           </button>

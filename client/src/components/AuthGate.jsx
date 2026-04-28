@@ -159,7 +159,7 @@ export default function AuthGate({ onLogin }) {
           ) : (
             <form onSubmit={handleNickname}>
               <h2>Welcome to Medium</h2>
-              <p className="auth-subtitle">Pick your nickname to join</p>
+              <p className="auth-subtitle">Make contact</p>
               <input
                 type="text"
                 placeholder="Nickname"

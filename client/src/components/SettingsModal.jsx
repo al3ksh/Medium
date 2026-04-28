@@ -194,7 +194,7 @@ export default function SettingsModal({ onClose }) {
           </button>
           <div className="settings-sidebar-footer">
             <span className="settings-sidebar-app">Medium</span>
-            <span className="settings-sidebar-version">v1.0.0</span>
+            <span className="settings-sidebar-version">v1.0.0 — Make contact</span>
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export default function SettingsModal({ onClose }) {
           {tab === 'voice' && <VoiceTab settings={settings} onUpdate={update} voice={voice} onMicTestChange={(v, was) => { micTestActive.current = v; wasDeafenedBeforeRef.current = was }} />}
           {tab === 'notifications' && <NotificationsTab settings={settings} onUpdate={update} />}
           <div className="settings-footer-info">
-            <span>Medium</span>
+            <span>Medium — Make contact</span>
             <div className="settings-footer-links">
               <span>This app uses local storage to save your preferences (<span className="legal-link" onClick={() => setLegalType('privacy')}>Privacy Policy</span>).</span>
               <span>By using Medium you agree to be respectful to other users on this network (<span className="legal-link" onClick={() => setLegalType('terms')}>Terms of Use</span>).</span>
