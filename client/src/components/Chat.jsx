@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
-import { Menu, X, Paperclip, Reply, Pencil, SmilePlus, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Menu, X, Paperclip, Reply, Pencil, SmilePlus, ChevronDown, FileText, ChevronUp, Download, Maximize2 } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar, useAuth, useNickUserIds } from '../contexts/AuthContext'
-import { loadSettings } from '../utils'
+import { loadSettings, useAnimatedClose } from '../utils'
 import { renderMarkdown } from '../utils/markdown.jsx'
 import { isChannelMuted, getNotifSetting } from './ChannelContextMenu'
 import FadeImage from './FadeImage'
@@ -11,6 +11,159 @@ import MessageInput from './MessageInput'
 import MessageContextMenu from './MessageContextMenu'
 import EmojiPicker from './EmojiPicker'
 import ConfirmModal from './ConfirmModal'
+
+const TXT_MAX_LINES = 150
+const TXT_MAX_CHARS = 50000
+const TXT_FETCH_MAX = 200000
+const TXT_MODAL_MAX = 1000000
+
+function sanitizeTxt(raw) {
+  return raw.replace(/[\x00\x01\x02\x03\x04\x05\x06\x07\x08\x0B\x0C\x0E\x0F\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F\x7F]/g, '')
+}
+
+function TxtViewerModal({ data, name, url, onClose }) {
+  const { closing, animatedClose } = useAnimatedClose(onClose)
+
+  useEffect(() => {
+    function handleKey(e) { if (e.key === 'Escape') animatedClose() }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [animatedClose])
+
+  return (
+    <div className={`txt-viewer-overlay${closing ? ' closing' : ''}`} onClick={animatedClose}>
+      <button className="image-viewer-close" onClick={animatedClose}>
+        <X size={24} />
+      </button>
+      <div className="txt-viewer-modal" onClick={e => e.stopPropagation()}>
+        <div className="txt-viewer-titlebar">
+          <FileText size={16} />
+          <span>{name || 'text.txt'}</span>
+          <span className="txt-viewer-meta">
+            {!data.loading && `${data.totalLines?.toLocaleString()} lines \u00B7 ${(data.totalChars / 1024).toFixed(1)} KB`}
+          </span>
+          <a href={url} download={name || 'text.txt'} className="txt-preview-download" title="Download">
+            <Download size={14} />
+          </a>
+        </div>
+        {data.loading ? (
+          <div className="txt-viewer-loading"><span className="txt-preview-spinner" /></div>
+        ) : (
+          <pre className="txt-viewer-content"><code>{data.displayText}</code></pre>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function TxtPreview({ url, name }) {
+  const [expanded, setExpanded] = useState(false)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [modal, setModal] = useState(false)
+
+  const loadFile = useCallback(async (full = false) => {
+    try {
+      const res = await fetch(url)
+      const ct = res.headers.get('content-type') || ''
+      if (!ct.startsWith('text/plain') && !ct.startsWith('text/')) {
+        return { displayText: 'Unsupported file type.', totalLines: 0, totalChars: 0, truncated: false, error: true }
+      }
+      if (full) {
+        const contentLength = parseInt(res.headers.get('content-length') || '0', 10)
+        if (contentLength > TXT_MODAL_MAX) {
+          return { displayText: `This file is too large to display (${(contentLength / 1024 / 1024).toFixed(1)} MB).\n\nDownload it to view the full content.`, totalLines: 0, totalChars: contentLength, truncated: false, error: true }
+        }
+      }
+      const raw = await res.text()
+      if (full && raw.length > TXT_MODAL_MAX) {
+        return { displayText: `This file is too large to display (${(raw.length / 1024 / 1024).toFixed(1)} MB).\n\nDownload it to view the full content.`, totalLines: raw.split('\n').length, totalChars: raw.length, truncated: false, error: true }
+      }
+      if (!full && raw.length > TXT_FETCH_MAX) {
+        return { displayText: `File too large to preview (${(raw.length / 1024).toFixed(0)} KB). Download to view.`, totalLines: raw.split('\n').length, totalChars: raw.length, truncated: false, error: true }
+      }
+      const text = sanitizeTxt(raw)
+      const lines = text.split('\n')
+      const totalLines = lines.length
+      const totalChars = text.length
+      if (full) {
+        return { displayText: text, totalLines, totalChars, truncated: false, lines }
+      }
+      const truncated = totalLines > TXT_MAX_LINES || totalChars > TXT_MAX_CHARS
+      let displayText = text
+      if (truncated) {
+        displayText = lines.slice(0, TXT_MAX_LINES).join('\n')
+        if (displayText.length > TXT_MAX_CHARS) {
+          displayText = displayText.slice(0, TXT_MAX_CHARS)
+        }
+      }
+      return { displayText, totalLines, totalChars, truncated }
+    } catch {
+      return { displayText: 'Failed to load file.', totalLines: 0, totalChars: 0, truncated: false, error: true }
+    }
+  }, [url])
+
+  const toggle = useCallback(async () => {
+    if (!expanded && data === null) {
+      setLoading(true)
+      const result = await loadFile()
+      setData(result)
+      setLoading(false)
+    }
+    setExpanded(e => !e)
+  }, [expanded, data, loadFile])
+
+  const openModal = useCallback(async (e) => {
+    e.stopPropagation()
+    setModal({ loading: true })
+    const result = await loadFile(true)
+    setModal(result)
+  }, [loadFile])
+
+  return (
+    <div className="txt-preview">
+      <div className="txt-preview-header" onClick={toggle}>
+        <div className="txt-preview-info">
+          <FileText size={16} />
+          <span className="txt-preview-name">{name || 'text.txt'}</span>
+        </div>
+        <div className="txt-preview-actions">
+          <button className="txt-preview-view" onClick={openModal} title="View in fullscreen">
+            <Maximize2 size={14} />
+          </button>
+          <a
+            href={url}
+            download={name || 'text.txt'}
+            className="txt-preview-download"
+            onClick={e => e.stopPropagation()}
+            title="Download"
+          >
+            <Download size={14} />
+          </a>
+          {loading
+            ? <span className="txt-preview-spinner" />
+            : expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />
+          }
+        </div>
+      </div>
+      {expanded && data !== null && (
+        <>
+          <pre className={`txt-preview-content${data.error ? ' txt-preview-error' : ''}`}>
+            <code>{data.displayText}{data.truncated && `\n\n... and ${Math.max(0, data.totalLines - TXT_MAX_LINES).toLocaleString()} more lines`}</code>
+          </pre>
+          {data.truncated && (
+            <div className="txt-preview-truncated">
+              Showing first {TXT_MAX_LINES} of {data.totalLines.toLocaleString()} lines ({(data.totalChars / 1024).toFixed(1)} KB). <button className="txt-preview-link" onClick={openModal}>View full file</button> or <a href={url} download={name || 'text.txt'}>download</a>
+            </div>
+          )}
+        </>
+      )}
+      {modal && (
+        <TxtViewerModal data={modal} name={name} url={url} onClose={() => setModal(null)} />
+      )}
+    </div>
+  )
+}
 
 function hashColor(str) {
   let hash = 0
@@ -438,7 +591,10 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                     )}
                   </div>
                 )}
-                {msg.attachment && !isImage(msg.attachment_type) && (
+                {msg.attachment && !isImage(msg.attachment_type) && msg.attachment_type === 'text/plain' && (
+                  <TxtPreview url={msg.attachment} name={msg.attachment_name} />
+                )}
+                {msg.attachment && !isImage(msg.attachment_type) && msg.attachment_type !== 'text/plain' && (
                   <a href={msg.attachment} target="_blank" rel="noreferrer" className="message-file">
                     <Paperclip size={14} /> {msg.attachment_name || 'File'}
                   </a>
