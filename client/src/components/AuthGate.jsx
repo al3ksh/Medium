@@ -37,7 +37,7 @@ function MagneticButton({ children, disabled, ...props }) {
 }
 
 export default function AuthGate({ onLogin }) {
-  const [step, setStep] = useState('passphrase')
+  const [step, setStep] = useState('nickname')
   const [passphrase, setPassphrase] = useState('')
   const [nickname, setNickname] = useState('')
   const [error, setError] = useState('')
@@ -45,11 +45,18 @@ export default function AuthGate({ onLogin }) {
   const [ripples, setRipples] = useState([])
   const [cookieConsent, setCookieConsent] = useState(true)
   const [legalType, setLegalType] = useState(null)
+  const [needsPassphrase, setNeedsPassphrase] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('medium-cookie-consent')) {
       setCookieConsent(false)
     }
+    fetch('/api/auth/config').then(r => r.json()).then(cfg => {
+      if (cfg.passphraseEnabled) {
+        setNeedsPassphrase(true)
+        setStep('passphrase')
+      }
+    }).catch(() => {})
   }, [])
 
   function handleAcceptCookies() {
@@ -95,10 +102,12 @@ export default function AuthGate({ onLogin }) {
     setError('')
     setLoading(true)
     try {
+      const body = { nickname }
+      if (needsPassphrase) body.passphrase = passphrase
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passphrase, nickname }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok) {
@@ -124,7 +133,7 @@ export default function AuthGate({ onLogin }) {
       
       <div className="auth-split-right">
         <div className="auth-premium-card">
-          {step === 'passphrase' ? (
+          {needsPassphrase && step === 'passphrase' ? (
             <form onSubmit={handlePassphrase}>
               <h2>Welcome back</h2>
               <p className="auth-subtitle">Enter the passphrase to join</p>
@@ -143,8 +152,8 @@ export default function AuthGate({ onLogin }) {
             </form>
           ) : (
             <form onSubmit={handleNickname}>
-              <h2>Pick your nickname</h2>
-              <p className="auth-subtitle">Choose how others will see you</p>
+              <h2>Welcome to Medium</h2>
+              <p className="auth-subtitle">Pick your nickname to join</p>
               <input
                 type="text"
                 placeholder="Nickname"

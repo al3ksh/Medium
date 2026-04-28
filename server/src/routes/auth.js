@@ -5,6 +5,10 @@ const router = express.Router()
 const { onlineUsers } = require('../store')
 
 router.post('/check-passphrase', (req, res) => {
+  if (process.env.PASSPHRASE_ENABLED !== 'true') {
+    return res.json({ valid: true })
+  }
+
   const { passphrase } = req.body
 
   if (!passphrase || passphrase !== process.env.PASSPHRASE) {
@@ -17,12 +21,14 @@ router.post('/check-passphrase', (req, res) => {
 router.post('/login', (req, res) => {
   const { passphrase, nickname } = req.body
 
-  if (!passphrase || !nickname) {
-    return res.status(400).json({ error: 'Passphrase and nickname are required' })
+  if (!nickname) {
+    return res.status(400).json({ error: 'Nickname is required' })
   }
 
-  if (passphrase !== process.env.PASSPHRASE) {
-    return res.status(403).json({ error: 'Wrong passphrase' })
+  if (process.env.PASSPHRASE_ENABLED === 'true') {
+    if (!passphrase || passphrase !== process.env.PASSPHRASE) {
+      return res.status(403).json({ error: 'Wrong passphrase' })
+    }
   }
 
   if (nickname.length < 2 || nickname.length > 20) {
@@ -43,6 +49,10 @@ router.post('/login', (req, res) => {
   )
 
   res.json({ token, nickname, userId })
+})
+
+router.get('/config', (req, res) => {
+  res.json({ passphraseEnabled: process.env.PASSPHRASE_ENABLED === 'true' })
 })
 
 router.get('/verify', (req, res) => {
