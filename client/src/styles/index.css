@@ -5297,7 +5297,8 @@ body {
   .settings-modal {
     flex-direction: column;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     max-width: none;
     border-radius: 0;
   }
@@ -5385,6 +5386,7 @@ body {
 
   .settings-content {
     padding: 1.5rem 1rem;
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: auto;
   }
