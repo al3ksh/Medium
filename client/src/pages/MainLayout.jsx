@@ -65,8 +65,9 @@ export default function MainLayout() {
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
 
   const edgeSwipe = useEdgeSwipe({
-    onEdgeSwipe: useCallback(() => setShowMobileSidebar(true), []),
-    edgeWidth: typeof window !== 'undefined' ? window.innerWidth / 2 : 200
+    onSwipeRight: useCallback(() => setShowMobileSidebar(true), []),
+    onSwipeLeft: useCallback(() => setShowMobileSidebar(false), []),
+    edgeWidth: 70
   })
 
   function clearUnread(channelId) {

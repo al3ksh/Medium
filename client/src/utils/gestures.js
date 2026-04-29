@@ -26,14 +26,15 @@ export function useSwipeGesture({ onSwipeLeft, onSwipeRight, threshold = 40 }) {
   return { onTouchStart, onTouchEnd }
 }
 
-export function useEdgeSwipe({ onEdgeSwipe, edgeWidth = 35 }) {
+export function useEdgeSwipe({ onSwipeRight, onSwipeLeft, edgeWidth = 35 }) {
   const startX = useRef(0)
   const startY = useRef(0)
   const tracking = useRef(false)
 
   const onTouchStart = useCallback((e) => {
     const touch = e.touches[0]
-    if (touch.clientX <= edgeWidth) {
+    const vw = window.innerWidth
+    if (touch.clientX <= vw * (edgeWidth / 100) || touch.clientX >= vw * (1 - edgeWidth / 100)) {
       startX.current = touch.clientX
       startY.current = touch.clientY
       tracking.current = true
@@ -47,8 +48,9 @@ export function useEdgeSwipe({ onEdgeSwipe, edgeWidth = 35 }) {
     const dx = touch.clientX - startX.current
     const dy = Math.abs(touch.clientY - startY.current)
     if (dy > Math.abs(dx)) return
-    if (dx > 25 && onEdgeSwipe) onEdgeSwipe()
-  }, [onEdgeSwipe])
+    if (dx > 25 && onSwipeRight) onSwipeRight()
+    if (dx < -25 && onSwipeLeft) onSwipeLeft()
+  }, [onSwipeRight, onSwipeLeft])
 
   return { onTouchStart, onTouchEnd }
 }

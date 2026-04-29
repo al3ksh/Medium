@@ -488,7 +488,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
           <Menu size={20} />
         </div>
         <span className="chat-channel-name"># {channel.name}</span>
-        <span className="chat-header-members" style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text-muted)' }}>{users.length}</span>
+        <span className="chat-header-members clickable" style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text-muted)' }} onClick={() => setShowMembers(true)}>{users.length}</span>
       </div>
 
       <div className="chat-messages" ref={chatRef}>
