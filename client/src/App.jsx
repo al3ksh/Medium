@@ -46,6 +46,13 @@ export default function App() {
 
           s.on('connect_error', (err) => {
             if (err.message === 'Nickname in use') {
+              s.disconnect()
+              localStorage.removeItem('token')
+              localStorage.removeItem('nickname')
+              localStorage.removeItem('userId')
+              setAuth({ nickInUse: true })
+              setSocket(null)
+            } else {
               handleLogout()
             }
           })
@@ -100,8 +107,8 @@ export default function App() {
     if (socket) socket.emit('user:color', color)
   }
 
-  if (!auth) {
-    return <AuthGate onLogin={handleLogin} />
+  if (!auth || auth.nickInUse) {
+    return <AuthGate onLogin={handleLogin} initialError={auth?.nickInUse ? 'This nickname is still in use. Wait a moment and try again.' : undefined} />
   }
 
   if (!auth.ready || !socket) {

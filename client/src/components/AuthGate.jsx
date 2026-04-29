@@ -36,11 +36,11 @@ function MagneticButton({ children, disabled, ...props }) {
   )
 }
 
-export default function AuthGate({ onLogin }) {
+export default function AuthGate({ onLogin, initialError }) {
   const [step, setStep] = useState('nickname')
   const [passphrase, setPassphrase] = useState('')
   const [nickname, setNickname] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialError || '')
   const [loading, setLoading] = useState(false)
   const [ripples, setRipples] = useState([])
   const [cookieConsent, setCookieConsent] = useState(true)

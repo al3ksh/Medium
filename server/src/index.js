@@ -263,10 +263,20 @@ io.on('connection', (socket) => {
       }
     }
 
-    io.emit('users:update', Array.from(onlineUsers.values()).map(u => u.nickname))
-    io.emit('user:ids', buildNickUserIds())
-    broadcastColors()
+    const disconnectedUserId = userId
+    const disconnectedNickname = nickname
     broadcastProfiles()
+    setTimeout(() => {
+      let returned = false
+      for (const [, entry] of onlineUsers) {
+        if (entry.userId === disconnectedUserId) { returned = true; break }
+      }
+      if (!returned) {
+        io.emit('users:update', Array.from(onlineUsers.values()).map(u => u.nickname))
+        io.emit('user:ids', buildNickUserIds())
+        broadcastColors()
+      }
+    }, 1500)
   })
 })
 
