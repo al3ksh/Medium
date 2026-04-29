@@ -493,7 +493,21 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
 
       <div className="chat-messages" ref={chatRef}>
         {loading ? (
-          <div className="chat-loading">Loading messages...</div>
+          <div className="chat-loading">
+            {[0,1,2,3,4,5,6,7].map(i => (
+              <div key={i} className={`skeleton-msg${i > 0 && (i === 2 || i === 5) ? '' : ''}`}>
+                <div className="skeleton-msg-avatar" />
+                <div className="skeleton-msg-body">
+                  <div className="skeleton-msg-header">
+                    <div className="skeleton-msg-nick" style={{ width: `${55 + (i * 19) % 45}px` }} />
+                    <div className="skeleton-msg-time" />
+                  </div>
+                  <div className="skeleton-msg-line" style={{ width: `${45 + (i * 17) % 40}%` }} />
+                  {i % 3 !== 1 && <div className="skeleton-msg-line short" style={{ width: `${25 + (i * 13) % 30}%` }} />}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : messages.length === 0 ? (
           <div className="chat-empty">No messages yet. Say something!</div>
         ) : (

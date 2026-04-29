@@ -701,10 +701,81 @@ body {
   gap: 0.25rem;
 }
 
-.chat-loading, .chat-empty {
+.chat-loading {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.chat-empty {
   text-align: center;
   color: var(--text-muted);
   padding: 2rem;
+}
+
+.skeleton-msg {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.35rem 1rem;
+  align-items: flex-start;
+}
+
+.skeleton-msg-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: linear-gradient(110deg, var(--bg-input) 30%, var(--bg-hover) 50%, var(--bg-input) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-msg-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 2px;
+  min-width: 0;
+}
+
+.skeleton-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.1rem;
+}
+
+.skeleton-msg-nick {
+  height: 13px;
+  border-radius: 3px;
+  background: linear-gradient(110deg, var(--bg-input) 30%, var(--bg-hover) 50%, var(--bg-input) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-msg-time {
+  width: 32px;
+  height: 9px;
+  border-radius: 3px;
+  background: linear-gradient(110deg, var(--bg-input) 30%, rgba(255,255,255,0.04) 50%, var(--bg-input) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-msg-line {
+  height: 12px;
+  border-radius: 3px;
+  background: linear-gradient(110deg, var(--bg-input) 30%, var(--bg-hover) 50%, var(--bg-input) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  max-width: 100%;
+}
+
+.skeleton-msg-line.short {
+  height: 11px;
 }
 
 .message {
