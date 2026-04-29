@@ -3,6 +3,7 @@ import { Menu, X, Paperclip, Reply, Pencil, SmilePlus, ChevronDown, FileText, Ch
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar, useAuth, useNickUserIds } from '../contexts/AuthContext'
 import { loadSettings, useAnimatedClose } from '../utils'
+import { useLongPress } from '../utils/gestures'
 import { renderMarkdown } from '../utils/markdown.jsx'
 import { isChannelMuted, getNotifSetting } from './ChannelContextMenu'
 import FadeImage from './FadeImage'
@@ -11,6 +12,7 @@ import MessageInput from './MessageInput'
 import MessageContextMenu from './MessageContextMenu'
 import EmojiPicker from './EmojiPicker'
 import ConfirmModal from './ConfirmModal'
+import UserList from './UserList'
 
 const TXT_MAX_LINES = 150
 const TXT_MAX_CHARS = 50000
@@ -181,7 +183,7 @@ function hashColor(str) {
   return `hsl(${h}, 70%, 60%)`
 }
 
-export default function Chat({ channel, users, nickname, onUserClick, onUserContextMenu }) {
+export default function Chat({ channel, users, nickname, onUserClick, onUserContextMenu, onToggleSidebar }) {
   const socket = useSocket()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
@@ -201,8 +203,15 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [msgContextMenu, setMsgContextMenu] = useState(null)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [swipingMsgId, setSwipingMsgId] = useState(null)
+  const [swipeX, setSwipeX] = useState(0)
+  const [showMembers, setShowMembers] = useState(false)
   const chatRef = useRef(null)
   const isAtBottom = useRef(true)
+
+  const headerLongPress = useLongPress(() => {
+    setShowMembers(true)
+  }, 500)
 
   function toggleNsfw(msgId, e) {
     e.stopPropagation()
@@ -474,11 +483,12 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
 
   return (
     <div className="chat-container">
-      <div className="chat-header">
-        <div className="mobile-toggle" onClick={() => window.dispatchEvent(new Event('toggle-sidebar'))}>
+      <div className="chat-header" {...headerLongPress}>
+        <div className="mobile-toggle" onClick={() => onToggleSidebar?.()}>
           <Menu size={20} />
         </div>
         <span className="chat-channel-name"># {channel.name}</span>
+        <span className="chat-header-members" style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text-muted)' }}>{users.length}</span>
       </div>
 
       <div className="chat-messages" ref={chatRef}>
@@ -487,16 +497,67 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         ) : messages.length === 0 ? (
           <div className="chat-empty">No messages yet. Say something!</div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, idx) => {
+            const prev = idx > 0 ? messages[idx - 1] : null
+            const grouped = prev && prev.nickname === msg.nickname && prev.user_id === msg.user_id && (msg.created_at - prev.created_at) < 300
             const currentUid = nickUserIds[msg.nickname]
             const isImpersonated = msg.user_id && currentUid && msg.user_id !== currentUid
             const isOwn = msg.user_id === myUserId
             const isEditing = editingId === msg.id
             return (
-            <div key={msg.id} id={`msg-${msg.id}`} className={`message${isImpersonated ? ' message-impersonator' : ''}${msg.id === newMsgId ? ' msg-new' : ''}${reactPicker === msg.id ? ' message-active' : ''}`} onContextMenu={(e) => {
-              e.preventDefault()
-              setMsgContextMenu({ msg, isOwn, x: e.clientX, y: e.clientY })
-            }}>
+            <div key={msg.id} className={`message-swipe-wrapper${swipingMsgId === msg.id ? ' swiping' : ''}`} style={swipingMsgId === msg.id ? { transform: `translateX(${swipeX}px)` } : undefined}>
+              {swipingMsgId === msg.id && swipeX < -30 && (
+                <div className="swipe-reply-indicator"><Reply size={18} /></div>
+              )}
+            <div id={`msg-${msg.id}`} className={`message${grouped ? ' message-grouped' : ''}${isImpersonated ? ' message-impersonator' : ''}${msg.id === newMsgId ? ' msg-new' : ''}${reactPicker === msg.id ? ' message-active' : ''}`}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setMsgContextMenu({ msg, isOwn, x: e.clientX, y: e.clientY })
+              }}
+              onTouchStart={(e) => {
+                const t = e.touches[0]
+                msg._lpX = t.clientX
+                msg._lpY = t.clientY
+                msg._swipeStartX = t.clientX
+                msg._swipeActive = true
+                msg._lpTimer = setTimeout(() => {
+                  msg._swipeActive = false
+                  setMsgContextMenu({ msg, isOwn, x: msg._lpX, y: msg._lpY })
+                }, 500)
+              }}
+              onTouchMove={(e) => {
+                const t = e.touches[0]
+                const dx = t.clientX - (msg._lpX || 0)
+                const dy = Math.abs(t.clientY - (msg._lpY || 0))
+                if (msg._lpTimer && (Math.abs(dx) > 10 || dy > 10)) {
+                  clearTimeout(msg._lpTimer)
+                  msg._lpTimer = null
+                }
+                if (dy < Math.abs(dx) && msg._swipeActive) {
+                  const raw = t.clientX - (msg._swipeStartX || 0)
+                  const clamped = Math.max(-80, Math.min(raw, 0))
+                  if (clamped < -5) {
+                    setSwipingMsgId(msg.id)
+                    setSwipeX(clamped)
+                  }
+                }
+              }}
+              onTouchEnd={() => {
+                if (msg._lpTimer) { clearTimeout(msg._lpTimer); msg._lpTimer = null }
+                if (msg._swipeActive && swipeX < -40 && swipingMsgId === msg.id) {
+                  setReplyTo(msg)
+                }
+                msg._swipeActive = false
+                setSwipingMsgId(null)
+                setSwipeX(0)
+              }}
+              onTouchCancel={() => {
+                if (msg._lpTimer) { clearTimeout(msg._lpTimer); msg._lpTimer = null }
+                msg._swipeActive = false
+                setSwipingMsgId(null)
+                setSwipeX(0)
+              }}
+            >
               <div
                 className="message-avatar clickable"
                 style={getAvatar(msg.nickname) ? {} : { background: isImpersonated ? hashColor(msg.user_id) : getColor(msg.nickname) }}
@@ -634,6 +695,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                 )}
               </div>
             </div>
+            </div>
           )})
         )}
         <div ref={bottomRef} />
@@ -718,6 +780,17 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
           onDelete={() => { handleDeleteMessage(msgContextMenu.msg.id, {}); setMsgContextMenu(null) }}
           onClose={() => setMsgContextMenu(null)}
         />
+      )}
+      {showMembers && (
+        <div className="members-sheet-backdrop" onClick={() => setShowMembers(false)}>
+          <div className="members-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="members-sheet-handle" />
+            <div className="members-sheet-header">Members — {users.length}</div>
+            <div className="members-sheet-list">
+              <UserList users={users} onUserClick={onUserClick} onUserContextMenu={onUserContextMenu} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

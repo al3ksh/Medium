@@ -24,12 +24,20 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
   const [pickerStyle, setPickerStyle] = useState({})
   const MAX_CHARS = 2000
 
-  function autoResize() {
+  const autoResize = useCallback(() => {
     const el = inputRef.current
     if (!el) return
+
+    const prevOverflow = el.style.overflowY
+    el.style.overflowY = 'hidden'
     el.style.height = 'auto'
     el.style.height = Math.min(el.scrollHeight, 160) + 'px'
-  }
+    el.style.overflowY = prevOverflow
+  }, [])
+
+  useLayoutEffect(() => {
+    autoResize()
+  }, [text, autoResize])
 
   const emitTyping = useCallback(() => {
     if (!socket || !channelId) return
@@ -107,7 +115,6 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     onSend(text.trim(), attachmentData, nsfw)
     setText('')
     setNsfw(false)
-    setTimeout(() => autoResize(), 0)
     clearTimeout(typingTimeout.current)
     socket?.emit('typing:stop', channelId)
     inputRef.current?.focus()
@@ -117,7 +124,6 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
     const val = e.target.value.slice(0, MAX_CHARS)
     const pos = Math.min(e.target.selectionStart, val.length)
     setText(val)
-    autoResize()
     emitTyping()
 
     const before = val.slice(0, pos)
@@ -344,7 +350,7 @@ export default function MessageInput({ onSend, replyTo, onCancelReply, users, ni
         <textarea
           ref={inputRef}
           className="message-input"
-          placeholder={uploading ? 'Uploading...' : 'Type a message...'}
+          placeholder={uploading ? 'Uploading...' : 'Type...'}
           value={text}
           onChange={handleChange}
           onKeyDown={handleKeyDown}

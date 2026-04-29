@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones, Search } from 'lucide-react'
+import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones, Search, Hash, User } from 'lucide-react'
 import { useAuth, useAvatarColor, useUserAvatar } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
@@ -7,6 +7,7 @@ import { nicknameToColor, useAnimatedClose } from '../utils'
 import { showToast } from '../components/ToastContainer'
 import { playNotifSound } from '../utils/notif'
 import { isChannelMuted, getNotifSetting } from '../components/ChannelContextMenu'
+import { useEdgeSwipe } from '../utils/gestures'
 import ChannelList from '../components/ChannelList'
 import Chat from '../components/Chat'
 import VoiceChannel, { SignalBars } from '../components/VoiceChannel'
@@ -61,6 +62,12 @@ export default function MainLayout() {
   const [unlockError, setUnlockError] = useState('')
   const [unread, setUnread] = useState({})
   const [showConnectionDetails, setShowConnectionDetails] = useState(false)
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
+
+  const edgeSwipe = useEdgeSwipe({
+    onEdgeSwipe: useCallback(() => setShowMobileSidebar(true), []),
+    edgeWidth: typeof window !== 'undefined' ? window.innerWidth / 2 : 200
+  })
 
   function clearUnread(channelId) {
     setUnread(prev => {
@@ -239,8 +246,15 @@ export default function MainLayout() {
     })
   }
 
+  const totalUnread = Object.values(unread).reduce((s, v) => s + (v || 0), 0)
+  const someoneSpeaking = joined && Object.values(occupancy).flat().length > 1
+
   return (
-    <div className="app-layout">
+    <div className="app-layout" {...(isMobile ? edgeSwipe : {})}>
+      <div
+        className={`mobile-drawer-backdrop${showMobileSidebar ? ' visible' : ''}`}
+        onClick={() => setShowMobileSidebar(false)}
+      />
       <aside className={`sidebar ${showMobileSidebar ? 'mobile-open' : ''}`}>
         <div className="sidebar-header" style={{ gap: '0.6rem' }}>
           <img src="/logo 11.png" alt="" style={{ height: '28px', objectFit: 'contain' }} />
@@ -356,7 +370,7 @@ export default function MainLayout() {
             <p>Pick a channel to start talking</p>
           </div>
         ) : activeChannel.type === 'text' ? (
-          <Chat key={activeChannel.id} channel={activeChannel} users={users} nickname={nickname} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} />
+          <Chat key={activeChannel.id} channel={activeChannel} users={users} nickname={nickname} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} onToggleSidebar={() => setShowMobileSidebar(true)} />
         ) : (
           <VoiceChannel key={activeChannel.id} channel={activeChannel} onUserClick={setUserPopup} onUserContextMenu={handleContextMenu} />
         )}
@@ -479,6 +493,46 @@ export default function MainLayout() {
         />
       )}
       {showConnectionDetails && <ConnectionDetailsModal onClose={() => setShowConnectionDetails(false)} />}
+
+      {isMobile && joined && voiceChannel && activeChannel?.id !== voiceChannel.id && (
+        <div className={`mobile-voice-pill${someoneSpeaking ? ' pulse' : ''}`}>
+          <div className="voice-pill-avatar" style={getAvatar(nickname) ? {} : { background: avatarColor }}>
+            {getAvatar(nickname) ? <img src={getAvatar(nickname)} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : nickname[0]?.toUpperCase()}
+          </div>
+          <div className="voice-pill-info" onClick={() => setActiveChannel(voiceChannel)} style={{ cursor: 'pointer' }}>
+            <span className="voice-pill-title">Voice Connected</span>
+            <span className="voice-pill-channel">{voiceChannel.name}</span>
+          </div>
+          <button className={`voice-pill-btn${isMuted ? ' muted' : ''}`} onClick={toggleMute}>
+            {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+          </button>
+          <button className="voice-pill-btn disconnect" onClick={leaveVoice}>
+            <PhoneOff size={18} />
+          </button>
+        </div>
+      )}
+
+      {isMobile && (
+        <nav className="mobile-nav">
+          <button className="mobile-nav-item" onClick={() => setShowMobileSidebar(true)}>
+            <Hash size={22} />
+            <span>Channels</span>
+            {totalUnread > 0 && <div className="mobile-nav-badge">{totalUnread > 99 ? '99+' : totalUnread}</div>}
+          </button>
+          <button className="mobile-nav-item" onClick={() => setShowSearch(true)}>
+            <Search size={22} />
+            <span>Search</span>
+          </button>
+          <button className="mobile-nav-item" onClick={() => setShowSettings(true)}>
+            <Settings size={22} />
+            <span>Settings</span>
+          </button>
+          <button className="mobile-nav-item" onClick={(e) => setUserPopup({ user: nickname, x: e.clientX + 10, y: e.clientY - 200 })}>
+            <User size={22} />
+            <span>Profile</span>
+          </button>
+        </nav>
+      )}
     </div>
   )
 }
