@@ -65,11 +65,11 @@ body {
   background: var(--bg-tertiary);
   color: var(--text-primary);
   overflow: hidden;
-  height: 100vh;
+  height: 100dvh;
 }
 
 #root {
-  height: 100vh;
+  height: 100dvh;
 }
 
 .loading {
@@ -85,7 +85,7 @@ body {
 
 .premium-split {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   background: #000;
@@ -298,7 +298,9 @@ body {
   .auth-split-right {
     flex: 1.2;
     padding: 2.5rem;
+    padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
     align-items: flex-start;
+    overflow-y: auto;
   }
   .auth-premium-card h2 {
     font-size: 2.2rem;
