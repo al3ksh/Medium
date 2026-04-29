@@ -4,6 +4,7 @@ const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const path = require('path')
+const rateLimit = require('express-rate-limit')
 
 const { db, migrate } = require('./db')
 const { socketAuthMiddleware } = require('./middleware/auth')
@@ -23,6 +24,9 @@ const io = new Server(server, {
   cors: { origin: true },
 })
 
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts, try again later' } })
+const previewLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } })
+
 app.use(express.json())
 app.use('/uploads', (req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
@@ -30,7 +34,7 @@ app.use('/uploads', (req, res, next) => {
   next()
 }, express.static(path.join(__dirname, '..', 'uploads')))
 
-app.use('/api/auth', authRoutes)
+app.use('/api/auth', authLimiter, authRoutes)
 app.use('/api/channels', channelRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/upload', uploadRoutes)
@@ -92,9 +96,20 @@ app.get('/api/ice-servers', (req, res) => {
   res.json(servers)
 })
 
-app.get('/api/link-preview', async (req, res) => {
+function isPrivateUrl(urlString) {
+  try {
+    const parsed = new URL(urlString)
+    if (!['http:', 'https:'].includes(parsed.protocol)) return true
+    const h = parsed.hostname
+    if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || h.endsWith('.local')) return true
+    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|0\.)/.test(h)) return true
+    return false
+  } catch { return true }
+}
+
+app.get('/api/link-preview', previewLimiter, async (req, res) => {
   const url = req.query.url
-  if (!url) return res.json(null)
+  if (!url || isPrivateUrl(url)) return res.json(null)
 
   try {
     const r = await fetch(url, {

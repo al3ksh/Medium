@@ -86,7 +86,7 @@ function registerChatHandlers(io, socket) {
     if (!msg) return
 
     const userId = socket.user.userId
-    if (msg.user_id && msg.user_id !== userId) return
+    if (!msg.user_id || msg.user_id !== userId) return
 
     db.prepare('DELETE FROM messages WHERE id = ?').run(messageId)
     io.to(`text:${msg.channel_id}`).emit('message:deleted', messageId)
@@ -98,7 +98,7 @@ function registerChatHandlers(io, socket) {
     if (!msg) return
 
     const userId = socket.user.userId
-    if (msg.user_id && msg.user_id !== userId) return
+    if (!msg.user_id || msg.user_id !== userId) return
 
     db.prepare('UPDATE messages SET content = ? WHERE id = ?').run(newContent, messageId)
     io.to(`text:${msg.channel_id}`).emit('message:edited', { id: messageId, content: newContent })

@@ -1,11 +1,14 @@
 const express = require('express')
 const router = express.Router()
+const rateLimit = require('express-rate-limit')
 const { db } = require('../db')
 const { authMiddleware } = require('../middleware/auth')
 
+const unlockLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts' } })
+
 router.use(authMiddleware)
 
-router.post('/unlock', (req, res) => {
+router.post('/unlock', unlockLimiter, (req, res) => {
   const { password } = req.body
   if (!password) {
     return res.status(400).json({ error: 'Password required' })

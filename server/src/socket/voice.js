@@ -59,15 +59,15 @@ function registerVoiceHandlers(io, socket) {
   })
 
   socket.on('voice:signal', (data) => {
+    if (!socket.voiceChannel) return
     const target = io.sockets.sockets.get(data.target)
-    if (target) {
-      target.emit('voice:signal', {
-        type: data.type,
-        sdp: data.sdp,
-        candidate: data.candidate,
-        from: socket.id,
-      })
-    }
+    if (!target || target.voiceChannel !== socket.voiceChannel) return
+    target.emit('voice:signal', {
+      type: data.type,
+      sdp: data.sdp,
+      candidate: data.candidate,
+      from: socket.id,
+    })
   })
 
   socket.on('voice:speaking', (isSpeaking) => {
@@ -106,6 +106,7 @@ function registerVoiceHandlers(io, socket) {
   })
 
   socket.on('voice:kick', ({ nickname, channelId }) => {
+    if (socket.voiceChannel !== channelId) return
     for (const [id, s] of io.sockets.sockets) {
       if (s.voiceChannel === channelId && s.user.nickname === nickname) {
         s.leave(`voice:${channelId}`)
