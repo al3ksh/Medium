@@ -3329,6 +3329,11 @@ body {
     flex-direction: column;
     animation: members-sheet-in 0.25s ease-out;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .members-sheet.expanded {
+    max-height: calc(100dvh - 56px);
   }
 
   @keyframes members-sheet-in {

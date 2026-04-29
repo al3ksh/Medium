@@ -174,6 +174,107 @@ function TxtPreview({ url, name }) {
   )
 }
 
+function MembersSheet({ users, onUserClick, onUserContextMenu, onClose }) {
+  const sheetRef = useRef(null)
+  const expandedRef = useRef(false)
+
+  useEffect(() => {
+    const el = sheetRef.current
+    if (!el || window.innerWidth > 900) return
+
+    let startY = 0
+    let currentY = 0
+    let isSwiping = false
+
+    const onTouchStart = (e) => {
+      const list = e.target.closest('.members-sheet-list')
+      if (list && list.scrollTop > 0) return
+      startY = e.touches[0].clientY
+      currentY = startY
+      isSwiping = true
+    }
+
+    const onTouchMove = (e) => {
+      if (!isSwiping) return
+      currentY = e.touches[0].clientY
+      const dy = currentY - startY
+      if (expandedRef.current) {
+        if (dy > 0) {
+          if (e.cancelable) e.preventDefault()
+          el.style.transform = `translateY(${dy}px)`
+          el.style.transition = 'none'
+        }
+      } else {
+        if (dy > 0) {
+          if (e.cancelable) e.preventDefault()
+          el.style.transform = `translateY(${dy}px)`
+          el.style.transition = 'none'
+        } else if (dy < -40) {
+          el.classList.add('expanded')
+          el.style.transform = ''
+          expandedRef.current = true
+          isSwiping = false
+        }
+      }
+    }
+
+    const onTouchEnd = () => {
+      if (!isSwiping) return
+      isSwiping = false
+      const dy = currentY - startY
+      if (dy > 120) {
+        el.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out'
+        el.style.transform = `translateY(100vh)`
+        el.style.opacity = '0'
+        if (el.parentElement) {
+          el.parentElement.style.transition = 'opacity 0.2s ease-out'
+          el.parentElement.style.opacity = '0'
+        }
+        setTimeout(() => onClose(), 200)
+      } else {
+        el.style.transform = ''
+        el.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+        setTimeout(() => { el.style.transition = '' }, 200)
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [onClose])
+
+  function animateClose() {
+    const el = sheetRef.current
+    if (!el) { onClose(); return }
+    el.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out'
+    el.style.transform = 'translateY(100vh)'
+    el.style.opacity = '0'
+    if (el.parentElement) {
+      el.parentElement.style.transition = 'opacity 0.2s ease-out'
+      el.parentElement.style.opacity = '0'
+    }
+    setTimeout(() => onClose(), 200)
+  }
+
+  return (
+    <div className="members-sheet-backdrop" onClick={animateClose}>
+      <div className="members-sheet" ref={sheetRef} onClick={(e) => e.stopPropagation()}>
+        <div className="members-sheet-handle" />
+        <div className="members-sheet-header">Members — {users.length}</div>
+        <div className="members-sheet-list">
+          <UserList users={users} onUserClick={onUserClick} onUserContextMenu={onUserContextMenu} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function hashColor(str) {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -209,6 +310,7 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const chatRef = useRef(null)
   const isAtBottom = useRef(true)
 
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
   const headerLongPress = useLongPress(() => {
     setShowMembers(true)
   }, 500)
@@ -483,12 +585,12 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
 
   return (
     <div className="chat-container">
-      <div className="chat-header" {...headerLongPress}>
+      <div className="chat-header" {...(isMobile ? headerLongPress : {})}>
         <div className="mobile-toggle" onClick={() => onToggleSidebar?.()}>
           <Menu size={20} />
         </div>
         <span className="chat-channel-name"># {channel.name}</span>
-        <span className="chat-header-members clickable" style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text-muted)' }} onClick={() => setShowMembers(true)}>{users.length}</span>
+        <span className="chat-header-members" style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text-muted)' }} {...(isMobile ? { onClick: () => setShowMembers(true), className: 'chat-header-members clickable' } : {})}>{users.length}</span>
       </div>
 
       <div className="chat-messages" ref={chatRef}>
@@ -796,15 +898,12 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         />
       )}
       {showMembers && (
-        <div className="members-sheet-backdrop" onClick={() => setShowMembers(false)}>
-          <div className="members-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="members-sheet-handle" />
-            <div className="members-sheet-header">Members — {users.length}</div>
-            <div className="members-sheet-list">
-              <UserList users={users} onUserClick={onUserClick} onUserContextMenu={onUserContextMenu} />
-            </div>
-          </div>
-        </div>
+        <MembersSheet
+          users={users}
+          onUserClick={onUserClick}
+          onUserContextMenu={onUserContextMenu}
+          onClose={() => setShowMembers(false)}
+        />
       )}
     </div>
   )
