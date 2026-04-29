@@ -168,74 +168,9 @@ export default function SettingsModal({ onClose }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
-  const modalRef = useRef(null)
-
-  useEffect(() => {
-    const el = modalRef.current
-    if (!el || window.innerWidth > 900) return
-
-    let startY = 0
-    let currentY = 0
-    let isSwiping = false
-
-    const onTouchStart = (e) => {
-      const scrollable = e.target.closest('.settings-content') || e.target.closest('.settings-sidebar')
-      if (scrollable && scrollable.scrollTop > 0) return
-      
-      startY = e.touches[0].clientY
-      currentY = startY
-      isSwiping = true
-    }
-
-    const onTouchMove = (e) => {
-      if (!isSwiping) return
-      currentY = e.touches[0].clientY
-      const dy = currentY - startY
-      
-      if (dy > 0) {
-        if (e.cancelable) e.preventDefault()
-        el.style.transform = `translateY(${dy}px)`
-        el.style.transition = 'none'
-      } else {
-        isSwiping = false
-      }
-    }
-
-    const onTouchEnd = () => {
-      if (!isSwiping) return
-      isSwiping = false
-      const dy = currentY - startY
-      if (dy > 120) {
-        el.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out'
-        el.style.transform = `translateY(100vh)`
-        el.style.opacity = '0'
-        if (el.parentElement) {
-          el.parentElement.style.transition = 'opacity 0.2s ease-out'
-          el.parentElement.style.opacity = '0'
-        }
-        setTimeout(() => onClose(), 200)
-      } else {
-        el.style.transform = ''
-        el.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-        setTimeout(() => { el.style.transition = '' }, 200)
-      }
-    }
-
-    el.addEventListener('touchstart', onTouchStart, { passive: false })
-    el.addEventListener('touchmove', onTouchMove, { passive: false })
-    el.addEventListener('touchend', onTouchEnd)
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchmove', onTouchMove)
-      el.removeEventListener('touchend', onTouchEnd)
-    }
-  }, [onClose])
-
   return (
     <div className={`settings-overlay ${closing ? 'closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}>
-      <div className="settings-modal" ref={modalRef}>
-        <div className="settings-drag-handle" />
+      <div className="settings-modal">
         <div className="settings-sidebar">
           <div className="settings-sidebar-label">User Settings</div>
           <div className="settings-nav">
@@ -477,9 +412,12 @@ function AccountTab({ settings, onUpdate }) {
       </div>
 
       {hasChanges && (
-        <div className="profile-actions">
-          <button className="profile-btn save" onClick={handleSave}>Save Changes</button>
-          <button className="profile-btn cancel" onClick={handleCancel}>Cancel</button>
+        <div className="profile-actions-notice">
+          <span className="notice-text">Careful — you have unsaved changes!</span>
+          <div className="notice-buttons">
+            <button className="profile-btn cancel" onClick={handleCancel}>Cancel</button>
+            <button className="profile-btn save" onClick={handleSave}>Save Changes</button>
+          </div>
         </div>
       )}
 

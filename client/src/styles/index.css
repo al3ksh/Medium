@@ -3941,26 +3941,56 @@ body {
   color: var(--text-muted);
 }
 
-.bio-actions,
-.profile-actions {
+.bio-actions {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
 
+.profile-actions-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-top: 1.5rem;
+  animation: slideUp 0.2s ease-out;
+}
+
+.notice-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.notice-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .bio-btn,
 .profile-btn {
-  padding: 0.35rem 1rem;
+  padding: 0.5rem 1.25rem;
   border-radius: var(--radius);
   border: none;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: all 0.15s ease;
 }
 
 .bio-btn:hover,
-.profile-btn:hover { opacity: 0.85; }
+.profile-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+.bio-btn:active,
+.profile-btn:active { transform: translateY(1px); }
 
 .bio-btn.save,
 .profile-btn.save {
@@ -3976,10 +4006,11 @@ body {
 
 .profile-saved {
   color: var(--green);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 500;
-  margin-top: 0.5rem;
+  margin-top: 1rem;
   animation: modal-content-in 0.15s ease-out;
+  text-align: center;
 }
 
 .crop-error {
