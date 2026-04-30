@@ -2473,51 +2473,140 @@ body {
 .stream-section:has(.stream-expanded) ~ .voice-grid.count-2,
 .stream-section:has(.stream-expanded) ~ .voice-grid.count-3,
 .stream-section:has(.stream-expanded) ~ .voice-grid.count-4 {
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+@media (max-width: 600px) {
+  .voice-grid {
+    gap: 0.5rem;
+  }
+
+  .voice-grid.count-1 {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-grid.count-2,
+  .voice-grid.count-3,
+  .voice-grid.count-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .voice-peer {
+    border-radius: 8px;
+    aspect-ratio: 1 / 1;
+  }
+
+  .voice-grid.count-1 .voice-peer {
+    aspect-ratio: 16 / 9;
+  }
+
+  .voice-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 1.6rem;
+    border-radius: 10px;
+  }
+
+  .voice-user-badge {
+    padding: 4px 8px;
+    bottom: 8px;
+    left: 8px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .stream-section:has(.stream-expanded) ~ .voice-grid {
+    max-height: 100px;
+    gap: 0.35rem;
+    padding: 0.15rem 0;
+  }
+
+  .stream-section:has(.stream-expanded) ~ .voice-grid .voice-peer {
+    aspect-ratio: 16 / 9;
+    padding: 0.35rem;
+  }
+
+  .stream-section:has(.stream-expanded) ~ .voice-grid .voice-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    border-radius: 6px;
+  }
+
+  .stream-section:has(.stream-expanded) ~ .voice-grid .voice-user-badge {
+    padding: 1px 4px;
+    bottom: 2px;
+    left: 2px;
+    border-radius: 4px;
+    gap: 2px;
+  }
+
+  .stream-section:has(.stream-expanded) ~ .voice-grid .voice-user-badge .voice-status-icon-inline svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  .stream-section:has(.stream-expanded) ~ .voice-grid .voice-name {
+    font-size: 0.55rem;
+  }
+
+  .stream-section:has(.stream-expanded) ~ .voice-grid.count-1,
+  .stream-section:has(.stream-expanded) ~ .voice-grid.count-2,
+  .stream-section:has(.stream-expanded) ~ .voice-grid.count-3,
+  .stream-section:has(.stream-expanded) ~ .voice-grid.count-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .voice-grid[class*="count-"]:not(.count-1):not(.count-2):not(.count-3):not(.count-4) {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: auto;
+  }
 }
 
 /* 1 PERSON */
-.voice-grid.count-1 {
-  grid-template-columns: minmax(300px, 800px);
-}
-.voice-grid.count-1 .voice-peer {
-  aspect-ratio: 16 / 9;
-}
+@media (min-width: 601px) {
+  .voice-grid.count-1 {
+    grid-template-columns: minmax(300px, 800px);
+  }
+  .voice-grid.count-1 .voice-peer {
+    aspect-ratio: 16 / 9;
+  }
 
-/* 2 PEOPLE */
-.voice-grid.count-2 {
-  grid-template-columns: repeat(2, minmax(280px, 600px));
-}
-.voice-grid.count-2 .voice-peer {
-  aspect-ratio: 4 / 3;
-}
+  /* 2 PEOPLE */
+  .voice-grid.count-2 {
+    grid-template-columns: repeat(2, minmax(280px, 600px));
+  }
+  .voice-grid.count-2 .voice-peer {
+    aspect-ratio: 4 / 3;
+  }
 
-/* 3 PEOPLE (2 on top, 1 centered bottom) */
-.voice-grid.count-3 {
-  grid-template-columns: repeat(2, minmax(250px, 450px));
-}
-.voice-grid.count-3 .voice-peer {
-  aspect-ratio: 4 / 3;
-}
-.voice-grid.count-3 .voice-peer:nth-child(3) {
-  grid-column: 1 / -1;
-  width: calc(50% - 0.75rem);
-  margin: 0 auto;
-}
+  /* 3 PEOPLE (2 on top, 1 centered bottom) */
+  .voice-grid.count-3 {
+    grid-template-columns: repeat(2, minmax(250px, 450px));
+  }
+  .voice-grid.count-3 .voice-peer {
+    aspect-ratio: 4 / 3;
+  }
+  .voice-grid.count-3 .voice-peer:nth-child(3) {
+    grid-column: 1 / -1;
+    width: calc(50% - 0.75rem);
+    margin: 0 auto;
+  }
 
-/* 4 PEOPLE */
-.voice-grid.count-4 {
-  grid-template-columns: repeat(2, minmax(250px, 450px));
-}
-.voice-grid.count-4 .voice-peer {
-  aspect-ratio: 4 / 3;
-}
+  /* 4 PEOPLE */
+  .voice-grid.count-4 {
+    grid-template-columns: repeat(2, minmax(250px, 450px));
+  }
+  .voice-grid.count-4 .voice-peer {
+    aspect-ratio: 4 / 3;
+  }
 
-/* 5+ PEOPLE */
-.voice-grid[class*="count-"]:not(.count-1):not(.count-2):not(.count-3):not(.count-4) {
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  grid-auto-rows: minmax(200px, 1fr);
-  width: 100%;
+  /* 5+ PEOPLE */
+  .voice-grid[class*="count-"]:not(.count-1):not(.count-2):not(.count-3):not(.count-4) {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-auto-rows: minmax(200px, 1fr);
+    width: 100%;
+  }
 }
 
 .voice-peer {
