@@ -136,7 +136,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                         <video
                           autoPlay
                           playsInline
-                          ref={(el) => { if (el) { streamVideoRefs.current[viewingScreen] = el; if (el.srcObject !== screenStreams[viewingScreen]) el.srcObject = screenStreams[viewingScreen]; const v = streamVolumes[viewingScreen]; el.volume = v?.muted ? 0 : (v?.level ?? 1) } }}
+                          ref={(el) => { if (el) { streamVideoRefs.current[viewingScreen] = el; if (el.srcObject !== screenStreams[viewingScreen]) el.srcObject = screenStreams[viewingScreen] } }}
                         />
                       ) : (
                         <div className="stream-thumb-placeholder" style={{ background: getColor(screenPresenters[viewingScreen]) }}>

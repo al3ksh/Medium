@@ -375,6 +375,11 @@ export function VoiceProvider({ children }) {
         delete copy[data.socketId]
         return copy
       })
+      setStreamViewers((prev) => {
+        const copy = { ...prev }
+        delete copy[data.socketId]
+        return copy
+      })
       setViewingScreen((prev) => prev === data.socketId ? null : prev)
     }
 
