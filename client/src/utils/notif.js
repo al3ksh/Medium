@@ -89,3 +89,36 @@ export function playUndeafenSound() {
   playTone(300, 500, 0.06)
   setTimeout(() => playTone(500, 650, 0.06), 50)
 }
+
+export function playStreamStartSound() {
+  try {
+    const s = JSON.parse(localStorage.getItem('medium-settings'))
+    if (!(s?.voiceJoinSound ?? true)) return
+  } catch {}
+  playTone(600, 900, 0.1)
+  setTimeout(() => playTone(900, 1200, 0.12), 90)
+}
+
+export function playStreamStopSound() {
+  try {
+    const s = JSON.parse(localStorage.getItem('medium-settings'))
+    if (!(s?.voiceJoinSound ?? true)) return
+  } catch {}
+  playTone(900, 600, 0.12)
+}
+
+export function playPeerJoinSound() {
+  try {
+    const s = JSON.parse(localStorage.getItem('medium-settings'))
+    if (!(s?.voiceJoinSound ?? true)) return
+  } catch {}
+  playTone(440, 660, 0.08)
+}
+
+export function playPeerLeaveSound() {
+  try {
+    const s = JSON.parse(localStorage.getItem('medium-settings'))
+    if (!(s?.voiceJoinSound ?? true)) return
+  } catch {}
+  playTone(660, 440, 0.08)
+}

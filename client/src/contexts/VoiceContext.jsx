@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useMemo, useCal
 import { useSocket } from './SocketContext'
 import { useAuth } from './AuthContext'
 import { loadSettings } from '../utils'
-import { playVoiceJoinSound, playVoiceLeaveSound, playMuteSound, playUnmuteSound, playDeafenSound, playUndeafenSound } from '../utils/notif'
+import { playVoiceJoinSound, playVoiceLeaveSound, playMuteSound, playUnmuteSound, playDeafenSound, playUndeafenSound, playStreamStartSound, playStreamStopSound, playPeerJoinSound, playPeerLeaveSound } from '../utils/notif'
 
 const VoiceContext = createContext(null)
 
@@ -258,12 +258,14 @@ export function VoiceProvider({ children }) {
     }
 
     function onUserJoined(data) {
+      playPeerJoinSound()
       setPeers((prev) => [...prev, data])
       if (data.isMuted) setPeerMuted((prev) => ({ ...prev, [data.socketId]: true }))
       if (data.isDeafened) setPeerDeafened((prev) => ({ ...prev, [data.socketId]: true }))
     }
 
     function onUserLeft(data) {
+      playPeerLeaveSound()
       setPeers((prev) => prev.filter((p) => p.socketId !== data.socketId))
       if (peerConnections.current[data.socketId]) {
         peerConnections.current[data.socketId].close()
@@ -357,10 +359,12 @@ export function VoiceProvider({ children }) {
     socket.on('voice:states', setVoiceStates)
 
     function onScreenStart(data) {
+      playStreamStartSound()
       setScreenPresenters((prev) => ({ ...prev, [data.socketId]: data.nickname }))
     }
 
     function onScreenStop(data) {
+      playStreamStopSound()
       setScreenPresenters((prev) => {
         const copy = { ...prev }
         delete copy[data.socketId]
@@ -661,6 +665,7 @@ export function VoiceProvider({ children }) {
       }
 
       socket.emit('voice:screen-start')
+      playStreamStartSound()
     } catch {}
   }
 
@@ -692,6 +697,7 @@ export function VoiceProvider({ children }) {
     setScreenStreams((prev) => { const c = { ...prev }; delete c[socket.id]; return c })
     setViewingScreen((prev) => prev === socket.id ? null : prev)
     socket.emit('voice:screen-stop')
+    playStreamStopSound()
 
     for (const [peerId, pc] of Object.entries(peerConnections.current)) {
       const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
