@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useSocket } from './SocketContext'
 import { useAuth } from './AuthContext'
 import { loadSettings } from '../utils'
@@ -53,7 +53,6 @@ export function VoiceProvider({ children }) {
   const audioContext = useRef(null)
   const remoteAudioRefs = useRef({})
   const pingInterval = useRef(null)
-  const autoRejoined = useRef(false)
   const rafId = useRef(null)
   const isMutedRef = useRef(false)
   const voiceModeRef = useRef(null)
@@ -65,13 +64,30 @@ export function VoiceProvider({ children }) {
   const lastInputDeviceRef = useRef(null)
   const analyserRef = useRef(null)
 
+  const voiceChannelRef = useRef(null)
+
   useEffect(() => {
-    if (!socket || autoRejoined.current) return
-    autoRejoined.current = true
+    setVoiceChannel(v => { voiceChannelRef.current = v; return v })
+  }, [voiceChannel])
+
+  useEffect(() => {
+    if (!socket) return
+
+    function onConnect() {
+      if (!voiceChannelRef.current) return
+      socket.emit('voice:join', voiceChannelRef.current.id)
+    }
+
+    socket.on('connect', onConnect)
+    return () => socket.off('connect', onConnect)
+  }, [socket])
+
+  useEffect(() => {
+    if (!socket) return
 
     try {
       const saved = JSON.parse(localStorage.getItem('voice-channel'))
-      if (saved?.id && saved?.name) {
+      if (saved?.id && saved?.name && !voiceChannelRef.current) {
         joinVoice(saved)
       }
     } catch {}
@@ -385,7 +401,6 @@ export function VoiceProvider({ children }) {
       socket.off('voice:user-left', onUserLeft)
       socket.off('voice:signal', onSignal)
       socket.off('voice:speaking', onSpeaking)
-      socket.off('voice:speaking', onSpeaking)
       socket.off('voice:mute', onPeerMute)
       socket.off('voice:deafen', onPeerDeafen)
       socket.off('voice:occupancy', setOccupancy)
@@ -394,6 +409,7 @@ export function VoiceProvider({ children }) {
       socket.off('voice:screen-stop', onScreenStop)
       socket.off('voice:stream-viewers')
       socket.off('voice:pong')
+      socket.off('voice:kicked')
     }
   }, [socket])
 
@@ -524,7 +540,10 @@ export function VoiceProvider({ children }) {
         if (rawSpeaking) lastActiveTime = Date.now()
         const isSpeaking = rawSpeaking || (Date.now() - lastActiveTime < SPEAKING_HOLD_MS)
 
-        setSpeaking(prev => ({ ...prev, [socket?.id]: isSpeaking }))
+        setSpeaking(prev => {
+          if (prev[socket?.id] === isSpeaking) return prev
+          return { ...prev, [socket?.id]: isSpeaking }
+        })
 
         if (isSpeaking !== lastSentSpeaking) {
           lastSentSpeaking = isSpeaking
@@ -734,20 +753,20 @@ export function VoiceProvider({ children }) {
     return parseInt(localStorage.getItem(`user-volume:${peerNickname}`) || '100')
   }
 
-  function toggleMute() {
+  const toggleMuteFn = useCallback(() => {
     if (!rawStream.current) return
-    const next = !isMuted
+    const next = !isMutedRef.current
     rawStream.current.getAudioTracks().forEach((t) => { t.enabled = !next })
     isMutedRef.current = next
     setIsMuted(next)
     localStorage.setItem('voice-muted', String(next))
     socket?.emit('voice:mute', next)
     next ? playMuteSound() : playUnmuteSound()
-  }
+  }, [socket])
 
   const wasMutedBeforeDeafen = useRef(false)
 
-  function toggleDeafen() {
+  const toggleDeafenFn = useCallback(() => {
     const next = !isDeafened
     setIsDeafened(next)
     localStorage.setItem('voice-deafened', String(next))
@@ -755,16 +774,17 @@ export function VoiceProvider({ children }) {
       if (audio) audio.muted = next
     })
     if (next) {
-      wasMutedBeforeDeafen.current = isMuted
-      if (!isMuted) {
+      wasMutedBeforeDeafen.current = isMutedRef.current
+      if (!isMutedRef.current) {
         if (rawStream.current) {
           rawStream.current.getAudioTracks().forEach((t) => { t.enabled = false })
         }
         isMutedRef.current = true
         setIsMuted(true)
         localStorage.setItem('voice-muted', 'true')
+        socket?.emit('voice:mute', true)
       }
-    } else if (!next) {
+    } else {
       if (!wasMutedBeforeDeafen.current) {
         if (rawStream.current) {
           rawStream.current.getAudioTracks().forEach((t) => { t.enabled = true })
@@ -772,55 +792,61 @@ export function VoiceProvider({ children }) {
         isMutedRef.current = false
         setIsMuted(false)
         localStorage.setItem('voice-muted', 'false')
+        socket?.emit('voice:mute', false)
       }
     }
     socket?.emit('voice:deafen', next)
     next ? playDeafenSound() : playUndeafenSound()
-  }
+  }, [isDeafened, socket])
+
+  const contextValue = useMemo(() => ({
+    joined,
+    voiceChannel,
+    peers,
+    speaking,
+    peerMuted,
+    peerDeafened,
+    voiceStates,
+    occupancy,
+    joinVoice,
+    leaveVoice,
+    remoteAudioRefs,
+    nickname,
+    socketId: socket?.id,
+    setUserVolume,
+    toggleUserMute,
+    isUserMuted,
+    getUserVolume,
+    isMuted,
+    isDeafened,
+    toggleMute: toggleMuteFn,
+    toggleDeafen: toggleDeafenFn,
+    ping,
+    pingHistory,
+    packetLoss,
+    isScreenSharing,
+    screenStreams,
+    screenPresenters,
+    streamViewers,
+    startScreenShare,
+    stopScreenShare,
+    applyStreamQuality,
+    viewingScreen,
+    setViewingScreen,
+    socket,
+  }), [joined, voiceChannel, peers, speaking, peerMuted, peerDeafened,
+    voiceStates, occupancy, nickname, socket, isMuted, isDeafened,
+    ping, pingHistory, packetLoss, isScreenSharing, screenStreams,
+    screenPresenters, streamViewers, viewingScreen, toggleMuteFn, toggleDeafenFn])
 
   return (
-    <VoiceContext.Provider value={{
-      joined,
-      voiceChannel,
-      peers,
-      speaking,
-      peerMuted,
-      peerDeafened,
-      voiceStates,
-      occupancy,
-      joinVoice,
-      leaveVoice,
-      remoteAudioRefs,
-      nickname,
-      socketId: socket?.id,
-      setUserVolume,
-      toggleUserMute,
-      isUserMuted,
-      getUserVolume,
-      isMuted,
-      isDeafened,
-      toggleMute,
-      toggleDeafen,
-      ping,
-      pingHistory,
-      packetLoss,
-      isScreenSharing,
-      screenStreams,
-      screenPresenters,
-      streamViewers,
-      startScreenShare,
-      stopScreenShare,
-      applyStreamQuality,
-      viewingScreen,
-      setViewingScreen,
-      socket,
-    }}>
+    <VoiceContext.Provider value={contextValue}>
       {children}
       {joined && peers.map((p) => (
         <audio
           key={`remote-audio-${p.socketId}`}
           ref={(el) => {
-            if (el) {
+            if (el && !remoteAudioRefs.current[p.socketId]) {
               const settings = loadSettings()
               el.volume = Math.min((settings.outputVolume ?? 100) / 100, 2)
               const sinkId = settings.outputDevice || ''

@@ -9,7 +9,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'u
 const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 20971520
 
 const ALLOWED_MIMES = new Set([
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
   'image/bmp', 'image/avif',
   'video/mp4', 'video/webm', 'video/quicktime',
   'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm',
@@ -22,7 +22,6 @@ const EXT_MAP = {
   'image/png': '.png',
   'image/gif': '.gif',
   'image/webp': '.webp',
-  'image/svg+xml': '.svg',
   'image/bmp': '.bmp',
   'image/avif': '.avif',
   'video/mp4': '.mp4',
