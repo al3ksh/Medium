@@ -249,7 +249,12 @@ io.on('connection', (socket) => {
 
     if (socket.voiceChannel) {
       socket.to(`voice:${socket.voiceChannel}`).emit('voice:user-left', { socketId: socket.id })
-      const { buildOccupancy, buildVoiceStates } = require('./socket/voice')
+      const { buildOccupancy, buildVoiceStates, streamViewers, broadcastViewers } = require('./socket/voice')
+      streamViewers.delete(socket.id)
+      for (const [presenterId] of streamViewers) {
+        const viewers = streamViewers.get(presenterId)
+        if (viewers && viewers.delete(socket.id)) broadcastViewers(io, presenterId)
+      }
       io.emit('voice:occupancy', buildOccupancy(io))
       io.emit('voice:states', buildVoiceStates(io))
     }

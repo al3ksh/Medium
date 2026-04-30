@@ -41,6 +41,7 @@ export function VoiceProvider({ children }) {
   const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [screenStreams, setScreenStreams] = useState({})
   const [screenPresenters, setScreenPresenters] = useState({})
+  const [streamViewers, setStreamViewers] = useState({})
   const [viewingScreen, setViewingScreen] = useState(null)
   const [ping, setPing] = useState(null)
   const [pingHistory, setPingHistory] = useState([])
@@ -359,6 +360,10 @@ export function VoiceProvider({ children }) {
 
     socket.on('voice:screen-start', onScreenStart)
     socket.on('voice:screen-stop', onScreenStop)
+
+    socket.on('voice:stream-viewers', ({ presenterId, viewers }) => {
+      setStreamViewers(prev => ({ ...prev, [presenterId]: viewers }))
+    })
     socket.on('voice:pong', (timestamp) => {
       const currentPing = Math.round(Date.now() - timestamp)
       setPing(currentPing)
@@ -387,6 +392,7 @@ export function VoiceProvider({ children }) {
       socket.off('voice:states', setVoiceStates)
       socket.off('voice:screen-start', onScreenStart)
       socket.off('voice:screen-stop', onScreenStop)
+      socket.off('voice:stream-viewers')
       socket.off('voice:pong')
     }
   }, [socket])
@@ -801,11 +807,13 @@ export function VoiceProvider({ children }) {
       isScreenSharing,
       screenStreams,
       screenPresenters,
+      streamViewers,
       startScreenShare,
       stopScreenShare,
       applyStreamQuality,
       viewingScreen,
       setViewingScreen,
+      socket,
     }}>
       {children}
       {joined && peers.map((p) => (

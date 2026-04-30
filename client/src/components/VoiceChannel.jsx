@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useAvatarColor, useUserColor, useUserAvatar } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
-import { Volume2, VolumeX, Mic, MicOff, Headphones, PhoneOff, Radio, Monitor, MonitorOff, Play, Settings, Volume1, Maximize, Minimize } from 'lucide-react'
+import { Volume2, VolumeX, Mic, MicOff, Headphones, PhoneOff, Radio, Monitor, MonitorOff, Play, Settings, Volume1, Maximize, Minimize, Eye } from 'lucide-react'
 import ConnectionDetailsModal from './ConnectionDetailsModal'
 
 export function SignalBars({ ping }) {
@@ -18,7 +18,7 @@ export function SignalBars({ ping }) {
 }
 
 export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }) {
-  const { joined, voiceChannel, peers, speaking, peerMuted, peerDeafened, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping, occupancy, voiceStates, isScreenSharing, screenStreams, screenPresenters, startScreenShare, stopScreenShare, applyStreamQuality, viewingScreen, setViewingScreen } = useVoice()
+  const { joined, voiceChannel, peers, speaking, peerMuted, peerDeafened, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping, occupancy, voiceStates, isScreenSharing, screenStreams, screenPresenters, streamViewers, startScreenShare, stopScreenShare, applyStreamQuality, viewingScreen, setViewingScreen, socket } = useVoice()
   const selfColor = useAvatarColor()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
@@ -32,6 +32,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
   const [streamCtx, setStreamCtx] = useState(null)
   const [streamVolumes, setStreamVolumes] = useState(() => JSON.parse(localStorage.getItem('stream-volumes') || '{}'))
   const [fullscreenStream, setFullscreenStream] = useState(null)
+  const [showViewers, setShowViewers] = useState(null)
   const streamMenuRef = useRef(null)
   const streamVideoRefs = useRef({})
   const playerRef = useRef(null)
@@ -80,6 +81,16 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
       return next
     })
   }, [])
+
+  const joinStream = useCallback((sid) => {
+    setJoinedStreams(prev => new Set(prev).add(sid))
+    socket?.emit('voice:stream-join', sid)
+  }, [socket])
+
+  const leaveStream = useCallback((sid) => {
+    setJoinedStreams(prev => { const n = new Set(prev); n.delete(sid); return n })
+    socket?.emit('voice:stream-leave', sid)
+  }, [socket])
 
   const openFullscreen = useCallback((sid) => {
     setFullscreenStream(sid)
@@ -135,10 +146,29 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                       <div className="stream-main-bar">
                         <Monitor size={14} />
                         <span>{screenPresenters[viewingScreen]}</span>
+                        <div className="stream-viewers-wrap">
+                          <button type="button" className={`stream-viewers-btn${showViewers === viewingScreen ? ' active' : ''}`} onClick={(e) => { e.stopPropagation(); setShowViewers(v => v === viewingScreen ? null : viewingScreen) }}>
+                            <Eye size={14} />
+                            <span>{(streamViewers[viewingScreen] || []).length || 0}</span>
+                          </button>
+                          {showViewers === viewingScreen && (
+                            <div className="stream-viewers-list" onClick={(e) => e.stopPropagation()}>
+                              {(streamViewers[viewingScreen] || []).length === 0 && <span className="stream-viewers-empty">No viewers yet</span>}
+                              {(streamViewers[viewingScreen] || []).map((vName, i) => (
+                                <div key={i} className="stream-viewer-item">
+                                  <div className="voice-avatar-sm" style={getAvatar(vName) ? {} : { background: getColor(vName) }}>
+                                    {getAvatar(vName) ? <img src={getAvatar(vName)} alt="" /> : vName[0]?.toUpperCase()}
+                                  </div>
+                                  <span>{vName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div className="stream-main-actions">
                           <button type="button" className="stream-main-action" onClick={(e) => {
                             e.stopPropagation()
-                            if (viewingScreen !== socketId) setJoinedStreams(prev => { const n = new Set(prev); n.delete(viewingScreen); return n })
+                            if (viewingScreen !== socketId) leaveStream(viewingScreen)
                             setViewingScreen(null)
                           }}>
                             <MonitorOff size={14} /> Stop Watching
@@ -153,7 +183,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                       {Object.entries(screenPresenters).filter(([sid]) => sid !== viewingScreen).map(([sid, name]) => {
                         const isJoined = joinedStreams.has(sid)
                         return (
-                          <button type="button" key={sid} className="stream-mini-thumb" onClick={() => isJoined ? setViewingScreen(sid) : setJoinedStreams(prev => new Set(prev).add(sid))}>
+                          <button type="button" key={sid} className="stream-mini-thumb" onClick={() => isJoined ? setViewingScreen(sid) : joinStream(sid)}>
                             {isJoined && screenStreams[sid] && (
                               <video autoPlay playsInline muted ref={(el) => { if (el && el.srcObject !== screenStreams[sid]) el.srcObject = screenStreams[sid] }} />
                             )}
@@ -177,7 +207,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                       const isSelf = sid === socketId
                       return (
                         <div key={sid} className={`stream-thumb${isJoined ? ' joined' : ''}`} onContextMenu={(e) => { e.preventDefault(); setStreamCtx({ sid, x: e.clientX, y: e.clientY }) }}>
-                          <button type="button" className="stream-thumb-click" onClick={() => isJoined ? setViewingScreen(sid) : setJoinedStreams(prev => new Set(prev).add(sid))}>
+                          <button type="button" className="stream-thumb-click" onClick={() => isJoined ? setViewingScreen(sid) : joinStream(sid)}>
                             <div className="stream-thumb-video">
                               {isJoined && screenStreams[sid] ? (
                                 <video autoPlay playsInline muted ref={(el) => { if (el && el.srcObject !== screenStreams[sid]) el.srcObject = screenStreams[sid] }} />
@@ -199,7 +229,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                           {isJoined && !isSelf && (
                             <button type="button" className="stream-thumb-leave" onClick={() => {
                               if (viewingScreen === sid) setViewingScreen(null)
-                              setJoinedStreams(prev => { const n = new Set(prev); n.delete(sid); return n })
+                              leaveStream(sid)
                             }}>
                               <MonitorOff size={14} />
                             </button>
@@ -376,8 +406,8 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
           streamFps={streamFps}
           onSetVolume={(l) => setStreamVolume(streamCtx.sid, l)}
           onToggleMute={() => toggleStreamMute(streamCtx.sid)}
-          onJoinStream={() => setJoinedStreams(prev => new Set(prev).add(streamCtx.sid))}
-          onStopWatching={() => { if (viewingScreen === streamCtx.sid) setViewingScreen(null); if (streamCtx.sid !== socketId) setJoinedStreams(prev => { const n = new Set(prev); n.delete(streamCtx.sid); return n }) }}
+          onJoinStream={() => joinStream(streamCtx.sid)}
+          onStopWatching={() => { if (viewingScreen === streamCtx.sid) setViewingScreen(null); if (streamCtx.sid !== socketId) leaveStream(streamCtx.sid) }}
           onStopStream={() => { stopScreenShare(); setViewingScreen(null) }}
           onFullscreen={() => openFullscreen(streamCtx.sid)}
           onChangeQuality={(res, fps) => {
@@ -395,11 +425,14 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
           stream={screenStreams[fullscreenStream]}
           name={screenPresenters[fullscreenStream]}
           volume={streamVolumes[fullscreenStream] || { level: 1, muted: false }}
+          viewers={streamViewers[fullscreenStream] || []}
+          getColor={getColor}
+          getAvatar={getAvatar}
           onSetVolume={(l) => setStreamVolume(fullscreenStream, l)}
           onToggleMute={() => toggleStreamMute(fullscreenStream)}
           onClose={() => {
             document.exitFullscreen?.()
-            if (fullscreenStream !== socketId) setJoinedStreams(prev => { const n = new Set(prev); n.delete(fullscreenStream); return n })
+            if (fullscreenStream !== socketId) leaveStream(fullscreenStream)
             setViewingScreen(null)
             setFullscreenStream(null)
           }}
@@ -499,10 +532,11 @@ function StreamContextMenu({ sid, x, y, isSelf, name, isViewing, isJoined, volum
   )
 }
 
-const StreamPlayer = React.forwardRef(function StreamPlayer({ stream, name, volume, onSetVolume, onToggleMute, onClose }, ref) {
+const StreamPlayer = React.forwardRef(function StreamPlayer({ stream, name, volume, viewers, getColor, getAvatar, onSetVolume, onToggleMute, onClose }, ref) {
   const videoRef = useRef(null)
   const [showControls, setShowControls] = useState(true)
   const [isPlayPaused, setIsPlayPaused] = useState(false)
+  const [fsViewers, setFsViewers] = useState(false)
   const hideTimer = useRef(null)
 
   const resetHideTimer = useCallback(() => {
@@ -575,11 +609,29 @@ const StreamPlayer = React.forwardRef(function StreamPlayer({ stream, name, volu
               <Monitor size={14} /> {name}
               <span className="stream-player-live">LIVE</span>
             </span>
-            <button type="button" className="stream-player-btn" onClick={(e) => { e.stopPropagation(); document.fullscreenElement ? document.exitFullscreen() : ref.current?.requestFullscreen?.() }} title="Fullscreen">
-              {document.fullscreenElement ? <Minimize size={18} /> : <Maximize size={18} />}
-            </button>
+            <div className="stream-player-eye-wrap">
+              <button type="button" className="stream-player-btn" onClick={(e) => { e.stopPropagation(); setFsViewers(v => !v) }} title="Viewers">
+                <Eye size={16} /> <span>{viewers.length}</span>
+              </button>
+              {fsViewers && (
+                <div className="stream-viewers-list" onClick={(e) => e.stopPropagation()}>
+                  {viewers.length === 0 && <span className="stream-viewers-empty">No viewers yet</span>}
+                  {viewers.map((v, i) => (
+                    <div key={i} className="stream-viewer-item">
+                      <div className="voice-avatar-sm" style={getAvatar(v) ? {} : { background: getColor(v) }}>
+                        {getAvatar(v) ? <img src={getAvatar(v)} alt="" /> : v[0]?.toUpperCase()}
+                      </div>
+                      <span>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <button type="button" className="stream-player-btn" onClick={(e) => { e.stopPropagation(); onClose() }} title="Leave Stream">
               <MonitorOff size={18} />
+            </button>
+            <button type="button" className="stream-player-btn" onClick={(e) => { e.stopPropagation(); document.fullscreenElement ? document.exitFullscreen() : ref.current?.requestFullscreen?.() }} title="Fullscreen">
+              {document.fullscreenElement ? <Minimize size={18} /> : <Maximize size={18} />}
             </button>
           </div>
         </div>

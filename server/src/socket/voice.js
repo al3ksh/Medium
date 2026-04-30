@@ -1,5 +1,18 @@
 const { db } = require('../db')
 
+const streamViewers = new Map()
+
+function broadcastViewers(io, presenterSocketId) {
+  const viewers = streamViewers.get(presenterSocketId)
+  if (!viewers) return
+  const list = []
+  for (const [, nickname] of viewers) list.push(nickname)
+  const presenter = io.sockets.sockets.get(presenterSocketId)
+  if (presenter?.voiceChannel) {
+    io.to(`voice:${presenter.voiceChannel}`).emit('voice:stream-viewers', { presenterId: presenterSocketId, viewers: list })
+  }
+}
+
 function buildOccupancy(io) {
   const occupancy = {}
   for (const [, s] of io.sockets.sockets) {
@@ -137,11 +150,30 @@ function registerVoiceHandlers(io, socket) {
   })
 
   socket.on('voice:screen-stop', () => {
+    if (socket.voiceChannel) {
+      socket.isScreenSharing = false
+      streamViewers.delete(socket.id)
+      socket.to(`voice:${socket.voiceChannel}`).emit('voice:screen-stop', { socketId: socket.id })
+      io.emit('voice:states', buildVoiceStates(io))
+    }
+  })
+
+  socket.on('voice:stream-join', (presenterId) => {
     if (!socket.voiceChannel) return
-    socket.isScreenSharing = false
-    socket.to(`voice:${socket.voiceChannel}`).emit('voice:screen-stop', { socketId: socket.id })
-    io.emit('voice:states', buildVoiceStates(io))
+    const presenter = io.sockets.sockets.get(presenterId)
+    if (!presenter || presenter.voiceChannel !== socket.voiceChannel) return
+    if (!streamViewers.has(presenterId)) streamViewers.set(presenterId, new Map())
+    streamViewers.get(presenterId).set(socket.id, socket.user.nickname)
+    broadcastViewers(io, presenterId)
+  })
+
+  socket.on('voice:stream-leave', (presenterId) => {
+    const viewers = streamViewers.get(presenterId)
+    if (viewers) {
+      viewers.delete(socket.id)
+      broadcastViewers(io, presenterId)
+    }
   })
 }
 
-module.exports = { registerVoiceHandlers, buildOccupancy, buildVoiceStates }
+module.exports = { registerVoiceHandlers, buildOccupancy, buildVoiceStates, streamViewers, broadcastViewers }
