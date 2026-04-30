@@ -42,39 +42,62 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
         {isActive && (
           <>
             {Object.keys(screenPresenters).length > 0 && (
-              <div className="stream-cards">
-                {Object.entries(screenPresenters).map(([sid, name]) => (
-                  <div key={sid} className="stream-card">
-                    {viewingScreen === sid && screenStreams[sid] ? (
-                      <div className="screen-viewer">
+              <div className="stream-section">
+                {viewingScreen ? (
+                  <div className="stream-expanded">
+                    <div className="stream-main" onClick={() => setViewingScreen(null)} title="Click to minimize">
+                      {screenStreams[viewingScreen] ? (
                         <video
                           autoPlay
                           playsInline
-                          ref={(el) => { if (el && el.srcObject !== screenStreams[sid]) el.srcObject = screenStreams[sid] }}
-                          onClick={(e) => { if (e.target.requestFullscreen) e.target.requestFullscreen() }}
+                          muted
+                          ref={(el) => { if (el && el.srcObject !== screenStreams[viewingScreen]) el.srcObject = screenStreams[viewingScreen] }}
                         />
-                        <div className="screen-viewer-bar">
-                          <Monitor size={14} />
-                          <span>{name}</span>
-                          <button className="screen-viewer-close" onClick={() => setViewingScreen(null)}>Stop Watching</button>
+                      ) : (
+                        <div className="stream-thumb-placeholder" style={{ background: getColor(screenPresenters[viewingScreen]) }}>
+                          {getAvatar(screenPresenters[viewingScreen]) ? <img src={getAvatar(screenPresenters[viewingScreen])} alt="" /> : screenPresenters[viewingScreen][0]?.toUpperCase()}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="stream-card-info">
-                        <div className="stream-card-avatar" style={getAvatar(name) ? {} : { background: getColor(name) }}>
-                          {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
-                        </div>
-                        <div className="stream-card-text">
-                          <span className="stream-card-name">{name}</span>
-                          <span className="stream-card-live">LIVE</span>
-                        </div>
-                        <button className="stream-watch-btn" onClick={() => setViewingScreen(sid)}>
-                          Watch Stream
+                      )}
+                      <div className="stream-main-bar">
+                        <Monitor size={14} />
+                        <span>{screenPresenters[viewingScreen]}</span>
+                        <button type="button" className="stream-main-close" onClick={(e) => { e.stopPropagation(); setViewingScreen(null) }}>
+                          <MonitorOff size={14} /> Stop Watching
                         </button>
                       </div>
-                    )}
+                    </div>
+                    <div className="stream-mini-row">
+                      {Object.entries(screenPresenters).filter(([sid]) => sid !== viewingScreen).map(([sid, name]) => (
+                        <button type="button" key={sid} className="stream-mini-thumb" onClick={() => setViewingScreen(sid)}>
+                          {screenStreams[sid] && (
+                            <video autoPlay playsInline muted ref={(el) => { if (el && el.srcObject !== screenStreams[sid]) el.srcObject = screenStreams[sid] }} />
+                          )}
+                          <span className="stream-mini-label">{name}</span>
+                          <span className="stream-mini-live">LIVE</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <div className="stream-thumbnail-row">
+                    {Object.entries(screenPresenters).map(([sid, name]) => (
+                      <button type="button" key={sid} className="stream-thumb" onClick={() => setViewingScreen(sid)}>
+                        <div className="stream-thumb-video">
+                          {screenStreams[sid] && (
+                            <video autoPlay playsInline muted ref={(el) => { if (el && el.srcObject !== screenStreams[sid]) el.srcObject = screenStreams[sid] }} />
+                          )}
+                          {!screenStreams[sid] && (
+                            <div className="stream-thumb-placeholder" style={{ background: getColor(name) }}>
+                              {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <span className="stream-thumb-live">LIVE</span>
+                        </div>
+                        <span className="stream-thumb-name">{name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <div className={`voice-grid count-${peers.length + 1}`}>
