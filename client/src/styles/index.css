@@ -2441,16 +2441,31 @@ body {
 }
 
 .stream-section:has(.stream-expanded) ~ .voice-grid .voice-user-badge {
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 1px;
-  padding: 3px 6px;
-  bottom: 6px;
-  left: 6px;
+  gap: 4px;
+  padding: 2px 6px;
+  bottom: 4px;
+  left: 4px;
+  border-radius: 6px;
+}
+
+.stream-section:has(.stream-expanded) ~ .voice-grid .voice-user-badge .voice-status-icon-inline {
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stream-section:has(.stream-expanded) ~ .voice-grid .voice-user-badge .voice-status-icon-inline svg {
+  width: 10px;
+  height: 10px;
 }
 
 .stream-section:has(.stream-expanded) ~ .voice-grid .voice-name {
   font-size: 0.65rem;
+  line-height: 1;
 }
 
 /* Override grid columns for YouTube-like horizontal tile row */
