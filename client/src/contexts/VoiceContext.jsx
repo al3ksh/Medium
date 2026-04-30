@@ -164,11 +164,28 @@ export function VoiceProvider({ children }) {
     }
 
     pc.ontrack = (e) => {
-      if (e.track.kind === 'audio') {
+      if (e.track.kind === 'video') {
+        const combined = e.streams[0] || new MediaStream()
+        setScreenStreams((prev) => {
+          const existing = prev[peerSocketId]
+          if (existing) {
+            existing.addTrack(e.track)
+            return { ...prev, [peerSocketId]: existing }
+          }
+          const s = new MediaStream([e.track])
+          return { ...prev, [peerSocketId]: s }
+        })
+      } else if (e.track.kind === 'audio') {
+        setScreenStreams((prev) => {
+          const existing = prev[peerSocketId]
+          if (existing && existing.getVideoTracks().length > 0) {
+            existing.addTrack(e.track)
+            return { ...prev, [peerSocketId]: existing }
+          }
+          return prev
+        })
         const audio = remoteAudioRefs.current[peerSocketId]
-        if (audio) audio.srcObject = e.streams[0]
-      } else if (e.track.kind === 'video') {
-        setScreenStreams((prev) => ({ ...prev, [peerSocketId]: e.streams[0] }))
+        if (audio && e.streams[0]) audio.srcObject = e.streams[0]
       }
     }
 
@@ -589,7 +606,7 @@ export function VoiceProvider({ children }) {
     socket.emit('voice:leave')
   }
 
-  async function startScreenShare(quality) {
+  async function startScreenShare(quality, withAudio) {
     const presets = {
       '480p30': { width: { ideal: 854 }, height: { ideal: 480 }, frameRate: { ideal: 30 } },
       '480p60': { width: { ideal: 854 }, height: { ideal: 480 }, frameRate: { ideal: 60 } },
@@ -602,7 +619,7 @@ export function VoiceProvider({ children }) {
     }
     const videoConstraints = quality && presets[quality] ? presets[quality] : presets['720p30']
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always', ...videoConstraints } })
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always', ...videoConstraints }, audio: withAudio ? true : false })
       screenStream.current = stream
       setIsScreenSharing(true)
       setScreenPresenters((prev) => ({ ...prev, [socket.id]: nickname }))
@@ -612,13 +629,31 @@ export function VoiceProvider({ children }) {
       videoTrack.onended = () => stopScreenShare()
 
       for (const [peerId, pc] of Object.entries(peerConnections.current)) {
-        pc.addTrack(videoTrack, stream)
+        stream.getTracks().forEach((t) => pc.addTrack(t, stream))
         const offer = await pc.createOffer()
         await pc.setLocalDescription(offer)
         socket.emit('voice:signal', { target: peerId, type: 'offer', sdp: pc.localDescription })
       }
 
       socket.emit('voice:screen-start')
+    } catch {}
+  }
+
+  async function applyStreamQuality(quality) {
+    if (!screenStream.current) return
+    const presets = {
+      '480p': { width: { ideal: 854 }, height: { ideal: 480 } },
+      '720p': { width: { ideal: 1280 }, height: { ideal: 720 } },
+      '1080p': { width: { ideal: 1920 }, height: { ideal: 1080 } },
+      'source': {},
+    }
+    const fpsMatch = quality.match(/(\d+)$/)
+    const resKey = quality.replace(/\d+$/, '')
+    const fps = fpsMatch ? parseInt(fpsMatch[1]) : 30
+    const constraints = { ...(presets[resKey] || {}), frameRate: { ideal: fps } }
+    try {
+      const track = screenStream.current.getVideoTracks()[0]
+      if (track) await track.applyConstraints(constraints)
     } catch {}
   }
 
@@ -768,6 +803,7 @@ export function VoiceProvider({ children }) {
       screenPresenters,
       startScreenShare,
       stopScreenShare,
+      applyStreamQuality,
       viewingScreen,
       setViewingScreen,
     }}>
