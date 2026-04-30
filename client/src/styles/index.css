@@ -2813,6 +2813,12 @@ body {
   position: relative;
 }
 
+.sidebar-stream-menu .stream-menu {
+  bottom: 100%;
+  right: 0;
+  left: auto;
+}
+
 .stream-menu {
   position: absolute;
   bottom: 100%;

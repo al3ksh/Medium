@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones, Search, Hash, User } from 'lucide-react'
+import { PhoneOff, Settings, Menu, Mic, MicOff, Headphones, Search, Hash, User, Monitor, MonitorOff } from 'lucide-react'
 import { useAuth, useAvatarColor, useUserAvatar } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
 import { useVoice } from '../contexts/VoiceContext'
@@ -24,7 +24,7 @@ import ConnectionDetailsModal from '../components/ConnectionDetailsModal'
 export default function MainLayout() {
   const { nickname, logout } = useAuth()
   const socket = useSocket()
-  const { joined, voiceChannel, leaveVoice, joinVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume, isMuted, isDeafened, toggleMute, toggleDeafen, ping, occupancy } = useVoice()
+  const { joined, voiceChannel, leaveVoice, joinVoice, setUserVolume, toggleUserMute, isUserMuted, getUserVolume, isMuted, isDeafened, toggleMute, toggleDeafen, ping, occupancy, isScreenSharing, stopScreenShare, startScreenShare } = useVoice()
   const avatarColor = useAvatarColor()
   const getAvatar = useUserAvatar()
   const [channels, setChannels] = useState([])
@@ -62,7 +62,19 @@ export default function MainLayout() {
   const [unlockError, setUnlockError] = useState('')
   const [unread, setUnread] = useState({})
   const [showConnectionDetails, setShowConnectionDetails] = useState(false)
+  const [showSidebarStream, setShowSidebarStream] = useState(false)
+  const [sidebarRes, setSidebarRes] = useState(() => localStorage.getItem('stream-res') || '720p')
+  const [sidebarFps, setSidebarFps] = useState(() => localStorage.getItem('stream-fps') || '30')
+  const [sidebarAudio, setSidebarAudio] = useState(() => localStorage.getItem('stream-audio') !== 'false')
+  const sidebarStreamRef = useRef(null)
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
+
+  useEffect(() => {
+    if (!showSidebarStream) return
+    function handleClick(e) { if (sidebarStreamRef.current && !sidebarStreamRef.current.contains(e.target)) setShowSidebarStream(false) }
+    document.addEventListener('pointerdown', handleClick)
+    return () => document.removeEventListener('pointerdown', handleClick)
+  }, [showSidebarStream])
 
   const edgeSwipe = useEdgeSwipe({
     onSwipeRight: useCallback(() => setShowMobileSidebar(true), []),
@@ -325,6 +337,42 @@ export default function MainLayout() {
               <span className="voice-bar-title">Voice Connected</span>
               <span className="voice-bar-channel">{voiceChannel.name}</span>
             </div>
+            {isScreenSharing ? (
+              <button className="footer-btn" onClick={stopScreenShare} title="Stop Sharing">
+                <MonitorOff size={16} />
+              </button>
+            ) : (
+              <div className="stream-menu-wrap sidebar-stream-menu" ref={sidebarStreamRef}>
+                <button className="footer-btn" onClick={() => setShowSidebarStream(v => !v)} title="Share Screen">
+                  <Monitor size={16} />
+                </button>
+                {showSidebarStream && (
+                  <div className="stream-menu">
+                    <div className="stream-menu-title">Resolution</div>
+                    {['source', '1080p', '720p', '480p'].map(r => (
+                      <button key={r} className={sidebarRes === r ? 'active' : ''} onClick={() => { setSidebarRes(r); localStorage.setItem('stream-res', r) }}>
+                        {r === 'source' ? 'Source' : r}
+                      </button>
+                    ))}
+                    <div className="stream-menu-title" style={{ marginTop: 4 }}>Frame Rate</div>
+                    {['30', '60'].map(f => (
+                      <button key={f} className={sidebarFps === f ? 'active' : ''} onClick={() => { setSidebarFps(f); localStorage.setItem('stream-fps', f) }}>
+                        {f}fps
+                      </button>
+                    ))}
+                    <div className="stream-menu-divider" />
+                    <label className="stream-menu-check">
+                      <input type="checkbox" checked={sidebarAudio} onChange={(e) => { setSidebarAudio(e.target.checked); localStorage.setItem('stream-audio', e.target.checked) }} />
+                      <span>Share Audio</span>
+                    </label>
+                    <div className="stream-menu-divider" />
+                    <button className="stream-menu-start" onClick={() => { startScreenShare(`${sidebarRes}${sidebarFps}`, sidebarAudio); setShowSidebarStream(false) }}>
+                      <Monitor size={14} /> Go Live
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <button className="footer-btn disconnect" onClick={leaveVoice} title="Disconnect">
               <PhoneOff size={16} />
             </button>
