@@ -589,11 +589,24 @@ export function VoiceProvider({ children }) {
     socket.emit('voice:leave')
   }
 
-  async function startScreenShare() {
+  async function startScreenShare(quality) {
+    const presets = {
+      '480p30': { width: { ideal: 854 }, height: { ideal: 480 }, frameRate: { ideal: 30 } },
+      '480p60': { width: { ideal: 854 }, height: { ideal: 480 }, frameRate: { ideal: 60 } },
+      '720p30': { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+      '720p60': { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 } },
+      '1080p30': { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+      '1080p60': { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } },
+      'source30': { frameRate: { ideal: 30 } },
+      'source60': { frameRate: { ideal: 60 } },
+    }
+    const videoConstraints = quality && presets[quality] ? presets[quality] : presets['720p30']
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' } })
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always', ...videoConstraints } })
       screenStream.current = stream
       setIsScreenSharing(true)
+      setScreenPresenters((prev) => ({ ...prev, [socket.id]: nickname }))
+      setScreenStreams((prev) => ({ ...prev, [socket.id]: stream }))
 
       const videoTrack = stream.getVideoTracks()[0]
       videoTrack.onended = () => stopScreenShare()
@@ -615,6 +628,9 @@ export function VoiceProvider({ children }) {
       screenStream.current = null
     }
     setIsScreenSharing(false)
+    setScreenPresenters((prev) => { const c = { ...prev }; delete c[socket.id]; return c })
+    setScreenStreams((prev) => { const c = { ...prev }; delete c[socket.id]; return c })
+    setViewingScreen((prev) => prev === socket.id ? null : prev)
     socket.emit('voice:screen-stop')
 
     for (const [peerId, pc] of Object.entries(peerConnections.current)) {

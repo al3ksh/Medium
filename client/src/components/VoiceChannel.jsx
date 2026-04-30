@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useAvatarColor, useUserColor, useUserAvatar } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
@@ -24,6 +24,19 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
   const getAvatar = useUserAvatar()
   const isActive = joined && voiceChannel?.id === channel.id
   const [showDetails, setShowDetails] = useState(false)
+  const [showStreamMenu, setShowStreamMenu] = useState(false)
+  const [streamRes, setStreamRes] = useState(() => localStorage.getItem('stream-res') || '720p')
+  const [streamFps, setStreamFps] = useState(() => localStorage.getItem('stream-fps') || '30')
+  const streamMenuRef = useRef(null)
+
+  useEffect(() => {
+    if (!showStreamMenu) return
+    function handleClick(e) {
+      if (streamMenuRef.current && !streamMenuRef.current.contains(e.target)) setShowStreamMenu(false)
+    }
+    document.addEventListener('pointerdown', handleClick)
+    return () => document.removeEventListener('pointerdown', handleClick)
+  }, [showStreamMenu])
   const channelUsers = occupancy[channel.id] || []
   const hasUsers = channelUsers.length > 0
 
@@ -199,9 +212,37 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
               <button className={`voice-tool-btn deafen ${isDeafened ? 'active' : ''}`} onClick={toggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'}>
                 <Headphones size={18} />
               </button>
-              <button className={`voice-tool-btn screen-share ${isScreenSharing ? 'active' : ''}`} onClick={isScreenSharing ? stopScreenShare : startScreenShare} title={isScreenSharing ? 'Stop Sharing' : 'Share Screen'}>
-                {isScreenSharing ? <MonitorOff size={18} /> : <Monitor size={18} />}
-              </button>
+              {isScreenSharing ? (
+                <button className="voice-tool-btn screen-share active" onClick={stopScreenShare} title="Stop Sharing">
+                  <MonitorOff size={18} />
+                </button>
+              ) : (
+                <div className="stream-menu-wrap" ref={streamMenuRef}>
+                  <button className="voice-tool-btn" onClick={() => setShowStreamMenu(v => !v)} title="Share Screen">
+                    <Monitor size={18} />
+                  </button>
+                  {showStreamMenu && (
+                    <div className="stream-menu">
+                      <div className="stream-menu-title">Resolution</div>
+                      {['source', '1080p', '720p', '480p'].map(r => (
+                        <button key={r} className={streamRes === r ? 'active' : ''} onClick={() => { setStreamRes(r); localStorage.setItem('stream-res', r) }}>
+                          {r === 'source' ? 'Source' : r}
+                        </button>
+                      ))}
+                      <div className="stream-menu-title" style={{ marginTop: 4 }}>Frame Rate</div>
+                      {['30', '60'].map(f => (
+                        <button key={f} className={streamFps === f ? 'active' : ''} onClick={() => { setStreamFps(f); localStorage.setItem('stream-fps', f) }}>
+                          {f}fps
+                        </button>
+                      ))}
+                      <div className="stream-menu-divider" />
+                      <button className="stream-menu-start" onClick={() => { startScreenShare(`${streamRes}${streamFps}`); setShowStreamMenu(false) }}>
+                        <Monitor size={14} /> Go Live
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               <button className="voice-tool-btn disconnect" onClick={leaveVoice} title="Disconnect">
                 <PhoneOff size={18} />
               </button>
