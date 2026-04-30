@@ -24,7 +24,6 @@ const io = new Server(server, {
   cors: { origin: true },
 })
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts, try again later' } })
 const previewLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } })
 
 app.use(express.json())
@@ -34,7 +33,7 @@ app.use('/uploads', (req, res, next) => {
   next()
 }, express.static(path.join(__dirname, '..', 'uploads')))
 
-app.use('/api/auth', authLimiter, authRoutes)
+app.use('/api/auth', authRoutes)
 app.use('/api/channels', channelRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/upload', uploadRoutes)
@@ -250,8 +249,9 @@ io.on('connection', (socket) => {
 
     if (socket.voiceChannel) {
       socket.to(`voice:${socket.voiceChannel}`).emit('voice:user-left', { socketId: socket.id })
-      const { buildOccupancy } = require('./socket/voice')
+      const { buildOccupancy, buildVoiceStates } = require('./socket/voice')
       io.emit('voice:occupancy', buildOccupancy(io))
+      io.emit('voice:states', buildVoiceStates(io))
     }
 
     let stillOnline = false

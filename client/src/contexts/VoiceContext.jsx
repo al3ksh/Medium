@@ -38,12 +38,17 @@ export function VoiceProvider({ children }) {
   const [occupancy, setOccupancy] = useState({})
   const [isMuted, setIsMuted] = useState(false)
   const [isDeafened, setIsDeafened] = useState(false)
+  const [isScreenSharing, setIsScreenSharing] = useState(false)
+  const [screenStreams, setScreenStreams] = useState({})
+  const [screenPresenters, setScreenPresenters] = useState({})
+  const [viewingScreen, setViewingScreen] = useState(null)
   const [ping, setPing] = useState(null)
   const [pingHistory, setPingHistory] = useState([])
   const [packetLoss, setPacketLoss] = useState(0)
   const peerConnections = useRef({})
   const rawStream = useRef(null)
   const localStream = useRef(null)
+  const screenStream = useRef(null)
   const audioContext = useRef(null)
   const remoteAudioRefs = useRef({})
   const pingInterval = useRef(null)
@@ -159,14 +164,22 @@ export function VoiceProvider({ children }) {
     }
 
     pc.ontrack = (e) => {
-      const audio = remoteAudioRefs.current[peerSocketId]
-      if (audio) {
-        audio.srcObject = e.streams[0]
+      if (e.track.kind === 'audio') {
+        const audio = remoteAudioRefs.current[peerSocketId]
+        if (audio) audio.srcObject = e.streams[0]
+      } else if (e.track.kind === 'video') {
+        setScreenStreams((prev) => ({ ...prev, [peerSocketId]: e.streams[0] }))
       }
     }
 
     if (localStream.current) {
       localStream.current.getTracks().forEach((t) => pc.addTrack(t, localStream.current))
+    }
+
+    if (screenStream.current) {
+      screenStream.current.getTracks().forEach((t) => pc.addTrack(t, screenStream.current))
+    } else {
+      pc.addTransceiver('video', { direction: 'recvonly' })
     }
 
     if (isInitiator) {
@@ -196,12 +209,15 @@ export function VoiceProvider({ children }) {
       setPeers(list)
       const muted = {}
       const deafened = {}
+      const presenters = {}
       list.forEach(p => {
         if (p.isMuted) muted[p.socketId] = true
         if (p.isDeafened) deafened[p.socketId] = true
+        if (p.isScreenSharing) presenters[p.socketId] = p.nickname
       })
       setPeerMuted(muted)
       setPeerDeafened(deafened)
+      setScreenPresenters(presenters)
       if (list.length > 0) {
         await createPeerConnections(list)
       }
@@ -234,6 +250,17 @@ export function VoiceProvider({ children }) {
         delete copy[data.socketId]
         return copy
       })
+      setScreenPresenters((prev) => {
+        const copy = { ...prev }
+        delete copy[data.socketId]
+        return copy
+      })
+      setScreenStreams((prev) => {
+        const copy = { ...prev }
+        delete copy[data.socketId]
+        return copy
+      })
+      setViewingScreen((prev) => prev === data.socketId ? null : prev)
     }
 
     function onPeerMute(data) {
@@ -259,17 +286,25 @@ export function VoiceProvider({ children }) {
       }
 
       if (sdp) {
-        pc?.setRemoteDescription(new RTCSessionDescription(sdp)).then(() => {
-          if (type === 'offer' && pc) {
-            pc.createAnswer().then((answer) => pc.setLocalDescription(answer)).then(() => {
-              socket.emit('voice:signal', { target: from, type: 'answer', sdp: pc.localDescription })
-            })
-          }
-        })
+        if (type === 'offer' && pc && pc.signalingState === 'have-local-offer') {
+          await pc.setLocalDescription({ type: 'rollback' })
+        }
+
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp))
+        } catch {
+          return
+        }
+
+        if (type === 'offer' && pc) {
+          const answer = await pc.createAnswer()
+          await pc.setLocalDescription(answer)
+          socket.emit('voice:signal', { target: from, type: 'answer', sdp: pc.localDescription })
+        }
       }
 
       if (candidate && pc) {
-        pc.addIceCandidate(new RTCIceCandidate(candidate))
+        pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {})
       }
     }
 
@@ -286,6 +321,27 @@ export function VoiceProvider({ children }) {
     socket.on('voice:deafen', onPeerDeafen)
     socket.on('voice:occupancy', setOccupancy)
     socket.on('voice:states', setVoiceStates)
+
+    function onScreenStart(data) {
+      setScreenPresenters((prev) => ({ ...prev, [data.socketId]: data.nickname }))
+    }
+
+    function onScreenStop(data) {
+      setScreenPresenters((prev) => {
+        const copy = { ...prev }
+        delete copy[data.socketId]
+        return copy
+      })
+      setScreenStreams((prev) => {
+        const copy = { ...prev }
+        delete copy[data.socketId]
+        return copy
+      })
+      setViewingScreen((prev) => prev === data.socketId ? null : prev)
+    }
+
+    socket.on('voice:screen-start', onScreenStart)
+    socket.on('voice:screen-stop', onScreenStop)
     socket.on('voice:pong', (timestamp) => {
       const currentPing = Math.round(Date.now() - timestamp)
       setPing(currentPing)
@@ -312,6 +368,8 @@ export function VoiceProvider({ children }) {
       socket.off('voice:deafen', onPeerDeafen)
       socket.off('voice:occupancy', setOccupancy)
       socket.off('voice:states', setVoiceStates)
+      socket.off('voice:screen-start', onScreenStart)
+      socket.off('voice:screen-stop', onScreenStop)
       socket.off('voice:pong')
     }
   }, [socket])
@@ -490,6 +548,10 @@ export function VoiceProvider({ children }) {
       localStream.current.getTracks().forEach((t) => t.stop())
       localStream.current = null
     }
+    if (screenStream.current) {
+      screenStream.current.getTracks().forEach((t) => t.stop())
+      screenStream.current = null
+    }
     if (audioContext.current) {
       audioContext.current.close()
       audioContext.current = null
@@ -508,6 +570,10 @@ export function VoiceProvider({ children }) {
     setPeerDeafened({})
     setIsMuted(false)
     setIsDeafened(false)
+    setIsScreenSharing(false)
+    setScreenStreams({})
+    setScreenPresenters({})
+    setViewingScreen(null)
     setPing(null)
     setPingHistory([])
     setPacketLoss(0)
@@ -517,9 +583,51 @@ export function VoiceProvider({ children }) {
   }
 
   function leaveVoice() {
+    if (isScreenSharing) stopScreenShare()
     playVoiceLeaveSound()
     cleanupVoice()
     socket.emit('voice:leave')
+  }
+
+  async function startScreenShare() {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' } })
+      screenStream.current = stream
+      setIsScreenSharing(true)
+
+      const videoTrack = stream.getVideoTracks()[0]
+      videoTrack.onended = () => stopScreenShare()
+
+      for (const [peerId, pc] of Object.entries(peerConnections.current)) {
+        pc.addTrack(videoTrack, stream)
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        socket.emit('voice:signal', { target: peerId, type: 'offer', sdp: pc.localDescription })
+      }
+
+      socket.emit('voice:screen-start')
+    } catch {}
+  }
+
+  async function stopScreenShare() {
+    if (screenStream.current) {
+      screenStream.current.getTracks().forEach((t) => t.stop())
+      screenStream.current = null
+    }
+    setIsScreenSharing(false)
+    socket.emit('voice:screen-stop')
+
+    for (const [peerId, pc] of Object.entries(peerConnections.current)) {
+      const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
+      if (sender) {
+        pc.removeTrack(sender)
+        try {
+          const offer = await pc.createOffer()
+          await pc.setLocalDescription(offer)
+          socket.emit('voice:signal', { target: peerId, type: 'offer', sdp: pc.localDescription })
+        } catch {}
+      }
+    }
   }
 
   function applyUserAudio(nickname) {
@@ -639,6 +747,13 @@ export function VoiceProvider({ children }) {
       ping,
       pingHistory,
       packetLoss,
+      isScreenSharing,
+      screenStreams,
+      screenPresenters,
+      startScreenShare,
+      stopScreenShare,
+      viewingScreen,
+      setViewingScreen,
     }}>
       {children}
       {joined && peers.map((p) => (

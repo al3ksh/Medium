@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useVoice } from '../contexts/VoiceContext'
 import { useAvatarColor, useUserColor, useUserAvatar } from '../contexts/AuthContext'
 import { nicknameToColor } from '../utils'
-import { Volume2, Mic, MicOff, Headphones, PhoneOff, Radio } from 'lucide-react'
+import { Volume2, Mic, MicOff, Headphones, PhoneOff, Radio, Monitor, MonitorOff } from 'lucide-react'
 import ConnectionDetailsModal from './ConnectionDetailsModal'
 
 export function SignalBars({ ping }) {
@@ -18,7 +18,7 @@ export function SignalBars({ ping }) {
 }
 
 export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }) {
-  const { joined, voiceChannel, peers, speaking, peerMuted, peerDeafened, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping, occupancy, voiceStates } = useVoice()
+  const { joined, voiceChannel, peers, speaking, peerMuted, peerDeafened, joinVoice, leaveVoice, nickname, socketId, isMuted, isDeafened, toggleMute, toggleDeafen, ping, occupancy, voiceStates, isScreenSharing, screenStreams, screenPresenters, startScreenShare, stopScreenShare, viewingScreen, setViewingScreen } = useVoice()
   const selfColor = useAvatarColor()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
@@ -40,7 +40,44 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
         )}
 
         {isActive && (
-          <div className={`voice-grid count-${peers.length + 1}`}>
+          <>
+            {Object.keys(screenPresenters).length > 0 && (
+              <div className="stream-cards">
+                {Object.entries(screenPresenters).map(([sid, name]) => (
+                  <div key={sid} className="stream-card">
+                    {viewingScreen === sid && screenStreams[sid] ? (
+                      <div className="screen-viewer">
+                        <video
+                          autoPlay
+                          playsInline
+                          ref={(el) => { if (el && el.srcObject !== screenStreams[sid]) el.srcObject = screenStreams[sid] }}
+                          onClick={(e) => { if (e.target.requestFullscreen) e.target.requestFullscreen() }}
+                        />
+                        <div className="screen-viewer-bar">
+                          <Monitor size={14} />
+                          <span>{name}</span>
+                          <button className="screen-viewer-close" onClick={() => setViewingScreen(null)}>Stop Watching</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="stream-card-info">
+                        <div className="stream-card-avatar" style={getAvatar(name) ? {} : { background: getColor(name) }}>
+                          {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
+                        </div>
+                        <div className="stream-card-text">
+                          <span className="stream-card-name">{name}</span>
+                          <span className="stream-card-live">LIVE</span>
+                        </div>
+                        <button className="stream-watch-btn" onClick={() => setViewingScreen(sid)}>
+                          Watch Stream
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={`voice-grid count-${peers.length + 1}`}>
             <div
               className={`voice-peer clickable speaking-${speaking[socketId] ? 'active' : 'idle'}`}
               onClick={(e) => onUserClick?.({ user: nickname, x: e.clientX + 10, y: e.clientY - 100 })}
@@ -49,11 +86,12 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
               <div className="voice-avatar" style={getAvatar(nickname) ? {} : { background: selfColor }}>
                 {getAvatar(nickname) ? <img src={getAvatar(nickname)} alt="" /> : nickname[0]?.toUpperCase()}
               </div>
-              <div className="voice-user-badge">
-                <span className="voice-name">{nickname} (you)</span>
-                {isMuted && !isDeafened && <MicOff size={16} className="voice-status-icon-inline" />}
-                {isDeafened && <Headphones size={16} className="voice-status-icon-inline deafened" />}
-              </div>
+                <div className="voice-user-badge">
+                  <span className="voice-name">{nickname} (you)</span>
+                  {isScreenSharing && <Monitor size={16} className="voice-status-icon-inline screen" />}
+                  {isMuted && !isDeafened && <MicOff size={16} className="voice-status-icon-inline" />}
+                  {isDeafened && <Headphones size={16} className="voice-status-icon-inline deafened" />}
+                </div>
             </div>
 
             {peers.map((p) => (
@@ -68,12 +106,14 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                 </div>
                 <div className="voice-user-badge">
                   <span className="voice-name">{p.nickname}</span>
+                  {screenPresenters[p.socketId] && <Monitor size={16} className="voice-status-icon-inline screen" />}
                   {peerMuted[p.socketId] && !peerDeafened[p.socketId] && <MicOff size={16} className="voice-status-icon-inline" />}
                   {peerDeafened[p.socketId] && <Headphones size={16} className="voice-status-icon-inline deafened" />}
                 </div>
               </div>
             ))}
           </div>
+          </>
         )}
 
         {!isActive && (
@@ -100,6 +140,7 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
                         <span className="voice-name-sm">{name}</span>
                         {st?.muted && !st?.deafened && <MicOff size={14} className="voice-user-status muted" />}
                         {st?.deafened && <Headphones size={14} className="voice-user-status deafened" />}
+                        {st?.screenSharing && <Monitor size={14} className="voice-user-status screen" />}
                       </div>
                     )
                   })}
@@ -134,6 +175,9 @@ export default function VoiceChannel({ channel, onUserClick, onUserContextMenu }
               </button>
               <button className={`voice-tool-btn deafen ${isDeafened ? 'active' : ''}`} onClick={toggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'}>
                 <Headphones size={18} />
+              </button>
+              <button className={`voice-tool-btn screen-share ${isScreenSharing ? 'active' : ''}`} onClick={isScreenSharing ? stopScreenShare : startScreenShare} title={isScreenSharing ? 'Stop Sharing' : 'Share Screen'}>
+                {isScreenSharing ? <MonitorOff size={18} /> : <Monitor size={18} />}
               </button>
               <button className="voice-tool-btn disconnect" onClick={leaveVoice} title="Disconnect">
                 <PhoneOff size={18} />

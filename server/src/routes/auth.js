@@ -1,10 +1,13 @@
 const express = require('express')
 const jwt = require('jsonwebtoken')
 const { v4: uuidv4 } = require('uuid')
+const rateLimit = require('express-rate-limit')
 const router = express.Router()
 const { onlineUsers } = require('../store')
 
-router.post('/check-passphrase', (req, res) => {
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts, try again later' } })
+
+router.post('/check-passphrase', authLimiter, (req, res) => {
   if (process.env.PASSPHRASE_ENABLED !== 'true') {
     return res.json({ valid: true })
   }
@@ -18,7 +21,7 @@ router.post('/check-passphrase', (req, res) => {
   res.json({ valid: true })
 })
 
-router.post('/login', (req, res) => {
+router.post('/login', authLimiter, (req, res) => {
   const { passphrase, nickname } = req.body
 
   if (!nickname) {

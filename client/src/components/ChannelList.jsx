@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Hash, Volume2, Plus, X, MicOff, Headphones, Lock, BellOff } from 'lucide-react'
+import { Hash, Volume2, Plus, X, MicOff, Headphones, Lock, BellOff, Monitor } from 'lucide-react'
 import { useVoice } from '../contexts/VoiceContext'
 import { isChannelMuted } from './ChannelContextMenu'
 import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
@@ -7,7 +7,7 @@ import { useUserColor, useUserAvatar } from '../contexts/AuthContext'
 export default function ChannelList({ label, channels, activeId, onSelect, type, socket, onChannelCreated, onChannelDeleted, onChannelContextMenu, onUserClick, onUserContextMenu, onRequestCreate, unlockedChannels, onUnlockNeeded, unread }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const { occupancy, joined, voiceChannel, leaveVoice, joinVoice, nickname, isMuted, isDeafened, voiceStates, socketId, speaking, peers } = useVoice()
+  const { occupancy, joined, voiceChannel, leaveVoice, joinVoice, nickname, isMuted, isDeafened, voiceStates, socketId, speaking, peers, isScreenSharing } = useVoice()
   const getColor = useUserColor()
   const getAvatar = useUserAvatar()
   const token = localStorage.getItem('token')
@@ -104,8 +104,8 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
             {allUsers.length > 0 && !isLocked && (
               <div className="voice-users-list">
                  {allUsers.map((name, i) => {
-                   const sId = name === nickname ? socketId : peers.find(p => p.nickname === name)?.socketId
-                   const isSpeaking = sId ? speaking[sId] : false
+                    const sId = name === nickname ? socketId : peers.find(p => p.nickname === name)?.socketId
+                    const isSpeaking = sId ? speaking[sId] : false
                    return (
                   <div
                     key={`${name}-${i}`}
@@ -117,17 +117,18 @@ export default function ChannelList({ label, channels, activeId, onSelect, type,
                       {getAvatar(name) ? <img src={getAvatar(name)} alt="" /> : name[0]?.toUpperCase()}
                     </div>
                     <span className="voice-user-name">{name}{name === nickname ? ' (you)' : ''}</span>
-                    <div className="voice-user-status-icons">
-                      {(() => {
-                        const st = name === nickname ? { muted: isMuted, deafened: isDeafened } : voiceStates[name]
-                        const locallyMuted = name !== nickname && localStorage.getItem(`user-muted:${name}`) === 'true'
-                        return <>
-                          {locallyMuted && <MicOff size={14} className="voice-user-status local-muted" />}
-                          {!locallyMuted && st?.muted && !st?.deafened && <MicOff size={14} className="voice-user-status muted" />}
-                          {st?.deafened && <Headphones size={14} className="voice-user-status deafened" />}
-                        </>
-                      })()}
-                    </div>
+                     <div className="voice-user-status-icons">
+                       {(() => {
+                          const st = name === nickname ? { muted: isMuted, deafened: isDeafened, screenSharing: isScreenSharing } : voiceStates[name]
+                          const locallyMuted = name !== nickname && localStorage.getItem(`user-muted:${name}`) === 'true'
+                          return <>
+                            {st?.screenSharing && <Monitor size={14} className="voice-user-status screen" />}
+                           {locallyMuted && <MicOff size={14} className="voice-user-status local-muted" />}
+                           {!locallyMuted && st?.muted && !st?.deafened && <MicOff size={14} className="voice-user-status muted" />}
+                           {st?.deafened && <Headphones size={14} className="voice-user-status deafened" />}
+                         </>
+                       })()}
+                     </div>
                   </div>
                  )})}
               </div>

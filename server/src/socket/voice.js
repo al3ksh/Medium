@@ -14,8 +14,14 @@ function buildOccupancy(io) {
 function buildVoiceStates(io) {
   const states = {}
   for (const [, s] of io.sockets.sockets) {
-    if (s.voiceChannel && (s.isMuted || s.isDeafened)) {
-      states[s.user.nickname] = { muted: !!s.isMuted, deafened: !!s.isDeafened }
+    if (s.voiceChannel) {
+      const state = {}
+      if (s.isMuted) state.muted = true
+      if (s.isDeafened) state.deafened = true
+      if (s.isScreenSharing) state.screenSharing = true
+      if (Object.keys(state).length > 0) {
+        states[s.user.nickname] = state
+      }
     }
   }
   return states
@@ -33,7 +39,7 @@ function registerVoiceHandlers(io, socket) {
     const peers = []
     for (const [id, s] of io.sockets.sockets) {
       if (id !== socket.id && s.voiceChannel === channelId) {
-        peers.push({ socketId: id, nickname: s.user.nickname, isMuted: !!s.isMuted, isDeafened: !!s.isDeafened })
+        peers.push({ socketId: id, nickname: s.user.nickname, isMuted: !!s.isMuted, isDeafened: !!s.isDeafened, isScreenSharing: !!s.isScreenSharing })
       }
     }
 
@@ -113,6 +119,7 @@ function registerVoiceHandlers(io, socket) {
         s.voiceChannel = null
         s.isMuted = false
         s.isDeafened = false
+        s.isScreenSharing = false
         s.emit('voice:kicked')
         socket.to(`voice:${channelId}`).emit('voice:user-left', { socketId: id })
         io.emit('voice:occupancy', buildOccupancy(io))
@@ -120,6 +127,20 @@ function registerVoiceHandlers(io, socket) {
         break
       }
     }
+  })
+
+  socket.on('voice:screen-start', () => {
+    if (!socket.voiceChannel) return
+    socket.isScreenSharing = true
+    socket.to(`voice:${socket.voiceChannel}`).emit('voice:screen-start', { socketId: socket.id, nickname: socket.user.nickname })
+    io.emit('voice:states', buildVoiceStates(io))
+  })
+
+  socket.on('voice:screen-stop', () => {
+    if (!socket.voiceChannel) return
+    socket.isScreenSharing = false
+    socket.to(`voice:${socket.voiceChannel}`).emit('voice:screen-stop', { socketId: socket.id })
+    io.emit('voice:states', buildVoiceStates(io))
   })
 }
 
