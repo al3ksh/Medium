@@ -46,13 +46,23 @@ router.get('/search/query', (req, res) => {
 
 router.get('/:channelId', (req, res) => {
   const { channelId } = req.params
-  const since = Math.floor(Date.now() / 1000) - 86400
+  const { before, limit } = req.query
+  const maxLimit = Math.min(parseInt(limit) || 50, 100)
 
-  const messages = db.prepare(
-    'SELECT * FROM messages WHERE channel_id = ? AND created_at >= ? ORDER BY created_at ASC'
-  ).all(channelId, since)
+  let messages, replyIds
 
-  const replyIds = [...new Set(messages.map(m => m.reply_to).filter(Boolean))]
+  if (before) {
+    messages = db.prepare(
+      'SELECT * FROM messages WHERE channel_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?'
+    ).all(channelId, parseInt(before), maxLimit).reverse()
+  } else {
+    const since = Math.floor(Date.now() / 1000) - 86400
+    messages = db.prepare(
+      'SELECT * FROM messages WHERE channel_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT ?'
+    ).all(channelId, since, maxLimit).reverse()
+  }
+
+  replyIds = [...new Set(messages.map(m => m.reply_to).filter(Boolean))]
   const replies = {}
   if (replyIds.length > 0) {
     const placeholders = replyIds.map(() => '?').join(',')

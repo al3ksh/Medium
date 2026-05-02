@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Menu, X, Paperclip, Reply, Pencil, SmilePlus, ChevronDown, FileText, ChevronUp, Download, Maximize2 } from 'lucide-react'
 import { useSocket } from '../contexts/SocketContext'
 import { useUserColor, useUserAvatar, useAuth, useNickUserIds } from '../contexts/AuthContext'
@@ -309,6 +309,10 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   const [showMembers, setShowMembers] = useState(false)
   const chatRef = useRef(null)
   const isAtBottom = useRef(true)
+  const topRef = useRef(null)
+  const hasMore = useRef(true)
+  const loadingMore = useRef(false)
+  const scrollAnchor = useRef(null)
 
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
   const headerLongPress = useLongPress(() => {
@@ -332,12 +336,15 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/messages/${channel.id}`, {
+    hasMore.current = true
+    loadingMore.current = false
+    fetch(`/api/messages/${channel.id}?limit=50`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
       .then((data) => {
         setMessages(data)
+        if (data.length < 50) hasMore.current = false
         setLoading(false)
       })
 
@@ -382,6 +389,40 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
   }, [channel.id])
 
   useEffect(() => {
+    const el = topRef.current
+    const root = chatRef.current
+    if (!el || !root) return
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return
+      if (!hasMore.current || loadingMore.current) return
+      loadingMore.current = true
+      const oldest = messages[0]?.created_at
+      if (!oldest) { loadingMore.current = false; return }
+      fetch(`/api/messages/${channel.id}?before=${oldest}&limit=50`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.length === 0) { hasMore.current = false; loadingMore.current = false; return }
+          if (data.length < 50) hasMore.current = false
+          scrollAnchor.current = root.scrollHeight - root.scrollTop
+          setMessages((prev) => [...data, ...prev])
+          loadingMore.current = false
+        })
+    }, { root, threshold: 0, rootMargin: '200px 0px 0px 0px' })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [channel.id, messages.length])
+
+  useEffect(() => {
+    if (scrollAnchor.current !== null) {
+      const root = chatRef.current
+      if (root) root.scrollTop = root.scrollHeight - scrollAnchor.current
+      scrollAnchor.current = null
+    }
+  }, [messages.length])
+
+useEffect(() => {
     const el = chatRef.current
     if (!el) return
     function handleScroll() {
@@ -613,7 +654,9 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         ) : messages.length === 0 ? (
           <div className="chat-empty">No messages yet. Say something!</div>
         ) : (
-          messages.map((msg, idx) => {
+          <React.Fragment>
+          <div ref={topRef} style={{ height: 1 }} />
+          {messages.map((msg, idx) => {
             const prev = idx > 0 ? messages[idx - 1] : null
             const grouped = prev && prev.nickname === msg.nickname && prev.user_id === msg.user_id && (msg.created_at - prev.created_at) < 300
             const currentUid = nickUserIds[msg.nickname]
@@ -810,9 +853,10 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
                   </div>
                 )}
               </div>
-            </div>
-            </div>
-          )})
+             </div>
+             </div>
+           )})}
+           </React.Fragment>
         )}
         <div ref={bottomRef} />
       </div>
