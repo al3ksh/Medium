@@ -87,7 +87,8 @@ export function VoiceProvider({ children }) {
 
     try {
       const saved = JSON.parse(localStorage.getItem('voice-channel'))
-      if (saved?.id && saved?.name && !voiceChannelRef.current) {
+      const storedUser = localStorage.getItem('voice-channel-user')
+      if (saved?.id && saved?.name && !voiceChannelRef.current && storedUser === nickname) {
         joinVoice(saved)
       }
     } catch {}
@@ -458,6 +459,7 @@ export function VoiceProvider({ children }) {
       playVoiceJoinSound()
       socket.emit('voice:join', channel.id)
       localStorage.setItem('voice-channel', JSON.stringify({ id: channel.id, name: channel.name }))
+      localStorage.setItem('voice-channel-user', nickname)
 
       const wasMuted = localStorage.getItem('voice-muted') === 'true'
       const wasDeafened = localStorage.getItem('voice-deafened') === 'true'
@@ -629,6 +631,7 @@ export function VoiceProvider({ children }) {
     setPingHistory([])
     setPacketLoss(0)
     localStorage.removeItem('voice-channel')
+    localStorage.removeItem('voice-channel-user')
     localStorage.removeItem('voice-muted')
     localStorage.removeItem('voice-deafened')
   }

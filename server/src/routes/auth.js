@@ -42,10 +42,6 @@ router.post('/login', authLimiter, (req, res) => {
     }
   }
 
-  if (nickname.length < 2 || nickname.length > 20) {
-    return res.status(400).json({ error: 'Nickname must be 2-20 characters' })
-  }
-
   const takenNicks = new Set(Array.from(onlineUsers.values()).map(u => u.nickname))
   if (takenNicks.has(nickname)) {
     return res.status(409).json({ error: 'This nickname is currently in use' })

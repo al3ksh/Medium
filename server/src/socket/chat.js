@@ -1,6 +1,7 @@
 const { db } = require('../db')
 
 const typingUsers = new Map()
+const messageTimestamps = new Map()
 
 function registerChatHandlers(io, socket) {
   socket.on('channel:join', (channelId, callback) => {
@@ -24,6 +25,16 @@ function registerChatHandlers(io, socket) {
 
   socket.on('message:send', (data) => {
     const { channelId, content, attachment, attachmentName, attachmentType, replyTo, nsfw } = data
+
+    const sentAt = Date.now()
+    const lastSent = messageTimestamps.get(socket.id) || 0
+    if (sentAt - lastSent < 250) return
+    messageTimestamps.set(socket.id, sentAt)
+    if (messageTimestamps.size > 500) {
+      for (const [k, v] of messageTimestamps) {
+        if (sentAt - v > 60000) messageTimestamps.delete(k)
+      }
+    }
 
     if (!channelId || (!content && !attachment)) return
     if (content && content.length > 2000) return

@@ -20,11 +20,20 @@ const uploadRoutes = require('./routes/upload')
 
 const app = express()
 const server = http.createServer(app)
+
+app.set('trust proxy', 1)
+
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+  : []
+
 const io = new Server(server, {
-  cors: { origin: true },
+  cors: { origin: allowedOrigins.length > 0 ? allowedOrigins : true },
 })
 
 const previewLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } })
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } })
+const uploadLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many upload requests' } })
 
 app.use(express.json())
 app.use('/uploads', (req, res, next) => {
@@ -35,8 +44,8 @@ app.use('/uploads', (req, res, next) => {
 
 app.use('/api/auth', authRoutes)
 app.use('/api/channels', channelRoutes)
-app.use('/api/messages', messageRoutes)
-app.use('/api/upload', uploadRoutes)
+app.use('/api/messages', apiLimiter, messageRoutes)
+app.use('/api/upload', uploadLimiter, uploadRoutes)
 
 const GIPHY_KEY = process.env.GIPHY_API_KEY || ''
 
