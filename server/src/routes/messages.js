@@ -56,10 +56,17 @@ router.get('/:channelId', (req, res) => {
       'SELECT * FROM messages WHERE channel_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?'
     ).all(channelId, parseInt(before), maxLimit).reverse()
   } else {
-    const since = Math.floor(Date.now() / 1000) - 86400
-    messages = db.prepare(
-      'SELECT * FROM messages WHERE channel_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT ?'
-    ).all(channelId, since, maxLimit).reverse()
+    const channel = db.prepare('SELECT locked FROM channels WHERE id = ?').get(channelId)
+    if (channel?.locked) {
+      messages = db.prepare(
+        'SELECT * FROM messages WHERE channel_id = ? ORDER BY created_at DESC LIMIT ?'
+      ).all(channelId, maxLimit).reverse()
+    } else {
+      const since = Math.floor(Date.now() / 1000) - 86400
+      messages = db.prepare(
+        'SELECT * FROM messages WHERE channel_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT ?'
+      ).all(channelId, since, maxLimit).reverse()
+    }
   }
 
   replyIds = [...new Set(messages.map(m => m.reply_to).filter(Boolean))]
