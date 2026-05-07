@@ -70,6 +70,30 @@ export default function MainLayout() {
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
 
   useEffect(() => {
+    if (!socket) return
+    function onConnect() {
+      const savedPass = localStorage.getItem('private-password')
+      if (savedPass) {
+        socket.emit('channel:unlock', savedPass, (res) => {
+          if (res?.ok) {
+            const newSet = new Set()
+            channelsRef.current.filter(c => c.locked).forEach(c => newSet.add(c.id))
+            setUnlockedChannels(newSet)
+            localStorage.setItem('unlocked-channels', JSON.stringify([...newSet]))
+          } else {
+            localStorage.removeItem('private-password')
+            localStorage.removeItem('unlocked-channels')
+            setUnlockedChannels(new Set())
+          }
+        })
+      }
+    }
+    onConnect()
+    socket.on('connect', onConnect)
+    return () => socket.off('connect', onConnect)
+  }, [socket])
+
+  useEffect(() => {
     if (!showSidebarStream) return
     function handleClick(e) { if (sidebarStreamRef.current && !sidebarStreamRef.current.contains(e.target)) setShowSidebarStream(false) }
     document.addEventListener('pointerdown', handleClick)
@@ -250,6 +274,7 @@ export default function MainLayout() {
         channels.filter(c => c.locked).forEach(c => newSet.add(c.id))
         setUnlockedChannels(newSet)
         localStorage.setItem('unlocked-channels', JSON.stringify([...newSet]))
+        localStorage.setItem('private-password', unlockPassword)
         setUnlockModal(null)
         setActiveChannel(unlockModal)
         setShowMobileSidebar(false)
