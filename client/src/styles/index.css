@@ -5,6 +5,11 @@
   font-style: normal;
 }
 
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 @font-face {
   font-family: 'Medium Sans';
   src: url('/fonts/MediumSans-Light.ttf') format('truetype');

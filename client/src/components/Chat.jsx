@@ -348,7 +348,14 @@ export default function Chat({ channel, users, nickname, onUserClick, onUserCont
         setLoading(false)
       })
 
-    socket.emit('channel:join', channel.id)
+    const savedPass = localStorage.getItem('private-password')
+    if (channel.locked && savedPass) {
+      socket.emit('channel:unlock', savedPass, (res) => {
+        if (res?.ok) socket.emit('channel:join', channel.id)
+      })
+    } else {
+      socket.emit('channel:join', channel.id)
+    }
 
     function onNewMessage(msg) {
       if (msg.channel_id === channel.id) {

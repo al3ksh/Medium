@@ -4,6 +4,8 @@ import App from './App.jsx'
 import { loadSettings, applyTheme } from './utils'
 import './styles/index.css'
 
+document.addEventListener('contextmenu', (e) => e.preventDefault())
+
 const s = loadSettings()
 applyTheme(s.theme || 'amoled', s.customTheme)
 
